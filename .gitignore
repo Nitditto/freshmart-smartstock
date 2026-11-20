@@ -1,0 +1,35 @@
+# Build output
+target/
+build/
+*.class
+*.log
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+*.swp
+.DS_Store
+
+# Secrets - NEVER commit (connection strings, JWT key, LLM API key)
+.env
+application-local.yml
+application-local.yaml
+application-local.properties
+*.pem
+*.key
+secrets/
+
+# Test / coverage
+/coverage/
+hs_err_pid*
+
+# Docker volumes
+mysql-data/

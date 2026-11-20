@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: smartstock
+  datasource:
+    # No defaults for secrets: provide via env vars (.env / IDE run config / application-local.yml)
+    url: ${DB_URL:jdbc:mysql://localhost:3306/smartstock?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8}
+    username: ${DB_USERNAME:smartstock}
+    password: ${DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Schema is owned by Flyway migrations (db/migration). Hibernate must never touch it.
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    time-zone: UTC
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: 8080
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+app:
+  timezone: Asia/Ho_Chi_Minh        # used to build document codes (PN-yyyyMMdd-xxx) and day boundaries
+  jwt:
+    secret: ${JWT_SECRET:}           # REQUIRED, >= 32 bytes. Never commit a real value.
+    expiration-minutes: 60
+  llm:
+    api-key: ${LLM_API_KEY:}         # empty => MockLlmService is used
+    base-url: ${LLM_BASE_URL:https://api.openai.com/v1}
+    model: ${LLM_MODEL:gpt-4o-mini}
+    timeout-seconds: 30
+  seed:
+    enabled: false
+    default-password: ${SEED_PASSWORD:}

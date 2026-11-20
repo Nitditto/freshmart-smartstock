@@ -1,0 +1,10 @@
+# Profile `test`: used by integration tests (Testcontainers MySQL is injected via @ServiceConnection).
+# The JWT secret below is a throw-away value used ONLY by tests - never reuse it anywhere else.
+app:
+  jwt:
+    secret: test-only-secret-test-only-secret-0123456789
+    expiration-minutes: 60
+  llm:
+    api-key: ""
+  seed:
+    enabled: false

@@ -1,0 +1,10 @@
+# Profile `dev`: local development & demo. Seeds sample data on startup (only if tables are empty).
+logging:
+  level:
+    com.freshmart.smartstock: DEBUG
+
+app:
+  seed:
+    enabled: true
+    # Dev-only sample password documented in README. Override with SEED_PASSWORD if you wish.
+    default-password: ${SEED_PASSWORD:FreshMart@2026}
