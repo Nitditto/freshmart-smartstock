@@ -64,7 +64,7 @@ Integration test dùng Testcontainers → cần Docker; không có Docker thì t
 
 ## 8. Git & PR
 - Nhánh: `main` (phát hành) ← `develop` (tích hợp) ← `feature/<chữ-cái>-<việc>`. **Không push thẳng** `main`/`develop`.
-- Commit: `feat:` `fix:` `docs:` `refactor:` `test:` (+ `chore:`); thể mệnh lệnh, **tiêu đề ≤ 72 ký tự; thân (nếu có) 1 dòng ≤ 72 ký tự, cách tiêu đề 1 dòng trống**, một thay đổi logic một commit (chi tiết: `CLAUDE.md` §4).
+- Commit: `feat:` `fix:` `docs:` `refactor:` `test:` (+ `chore:`); thể mệnh lệnh, **tiêu đề ≤ 72 ký tự; thân (nếu có) 1 dòng ≤ 72 ký tự, cách tiêu đề 1 dòng trống**, một thay đổi logic một commit; **không thêm `Co-Authored-By`/attribution của AI vào commit hay PR** (chi tiết: `CLAUDE.md` §4).
 - PR nhỏ, một mục đích, ≥ 1 người khác review, `mvn -B verify` xanh, điền template. Mỗi thành viên ≥ 3 PR merged. Đổi hợp đồng API → sửa `docs/api-contract.md` trong cùng PR.
 - Không commit `target/`, `.idea/`, file lớn, dữ liệu thật. Tag: `v0.1.0` (23/11), `v1.0.0` (29/11).
 
