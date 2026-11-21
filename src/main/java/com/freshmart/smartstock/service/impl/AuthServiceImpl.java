@@ -2,6 +2,7 @@ package com.freshmart.smartstock.service.impl;
 
 import com.freshmart.smartstock.common.exception.ApiException;
 import com.freshmart.smartstock.domain.entity.User;
+import com.freshmart.smartstock.dto.auth.ChangePasswordRequest;
 import com.freshmart.smartstock.dto.auth.LoginRequest;
 import com.freshmart.smartstock.dto.auth.LoginResponse;
 import com.freshmart.smartstock.dto.user.UserResponse;
@@ -45,5 +46,19 @@ public class AuthServiceImpl implements AuthService {
         return userRepository.findById(SecurityUtils.currentUserId())
                 .map(UserResponse::from)
                 .orElseThrow(() -> ApiException.unauthorized("Tài khoản không còn tồn tại"));
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
+        User user = userRepository.findById(SecurityUtils.currentUserId())
+                .orElseThrow(() -> ApiException.unauthorized("Tài khoản không còn tồn tại"));
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw ApiException.badRequest("Mật khẩu hiện tại không đúng");
+        }
+        if (request.currentPassword().equals(request.newPassword())) {
+            throw ApiException.badRequest("Mật khẩu mới phải khác mật khẩu hiện tại");
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
     }
 }
