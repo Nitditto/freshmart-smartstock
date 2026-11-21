@@ -37,7 +37,7 @@
 
 | Chức năng | ADMIN | STAFF |
 |-----------|:-----:|:-----:|
-| Đăng nhập, xem `/auth/me` | ✔ | ✔ |
+| Đăng nhập, xem `/auth/me`, đổi mật khẩu | ✔ | ✔ |
 | Quản lý tài khoản (`/api/users`) | ✔ | ✘ (403) |
 | Xem danh mục / sản phẩm / nhà cung cấp / tồn kho / low-stock / lịch sử | ✔ | ✔ |
 | Tạo/sửa/ẩn danh mục, sản phẩm, nhà cung cấp | ✔ | ✘ (403) |
@@ -56,6 +56,7 @@ Cột **Owner**: A/B/C/D/E theo `docs/plans/member-*.md`. Trạng thái trong sk
 |---|---|---|---|---|---|
 | POST `/api/auth/login` | Cấp JWT | public | 200, 400, 401 | D | ✅ |
 | GET `/api/auth/me` | User hiện tại | any | 200, 401 | D | ✅ |
+| PATCH `/api/auth/password` | Đổi mật khẩu `{currentPassword,newPassword}`; sai mật khẩu cũ hoặc mới trùng cũ → 400; mới 8–72 ký tự | any | 200, 400, 401 | D | ✅ |
 | GET `/api/users` | Danh sách tài khoản | ADMIN | 200, 401, 403 | D | 🧩 |
 | POST `/api/users` | Tạo tài khoản | ADMIN | 201, 400, 401, 403, 409 | D | 🧩 |
 | PATCH `/api/users/{id}/status` | Khóa/mở khóa | ADMIN | 200, 400, 401, 403, 404, 409 | D | 🧩 |
