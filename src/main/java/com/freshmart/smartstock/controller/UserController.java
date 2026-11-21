@@ -6,6 +6,8 @@ import com.freshmart.smartstock.dto.user.UpdateUserStatusRequest;
 import com.freshmart.smartstock.dto.user.UserResponse;
 import com.freshmart.smartstock.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -38,13 +40,19 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create a user account")
+    @Operation(summary = "Create a user account",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
+                    @ExampleObject(name = "STAFF", value = "{\"fullName\":\"Nguyễn Văn A\","
+                            + "\"email\":\"staff2@freshmart.local\",\"password\":\"Staff@2026\","
+                            + "\"role\":\"STAFF\"}")})))
     public ApiResponse<UserResponse> create(@Valid @RequestBody CreateUserRequest request) {
         return ApiResponse.created(userService.create(request));
     }
 
     @PatchMapping("/{id}/status")
-    @Operation(summary = "Lock / unlock a user account")
+    @Operation(summary = "Lock / unlock a user account",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
+                    @ExampleObject(name = "Lock", value = "{\"active\":false}")})))
     public ApiResponse<UserResponse> updateStatus(@PathVariable Long id,
                                                   @Valid @RequestBody UpdateUserStatusRequest request) {
         return ApiResponse.ok(userService.updateStatus(id, request));
