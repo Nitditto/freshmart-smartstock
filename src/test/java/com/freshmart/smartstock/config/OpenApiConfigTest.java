@@ -29,4 +29,15 @@ class OpenApiConfigTest {
         assertSame(custom, operation.getResponses().get("409"));
         assertEquals(5, operation.getResponses().size());
     }
+
+    @Test
+    void shortageExampleListsProductsAndReplacesTheGeneric409() {
+        Operation operation = new Operation();
+
+        OpenApiConfig.addShortageExample(operation);
+        OpenApiConfig.addMissingErrorResponses(operation);
+
+        assertTrue(operation.getResponses().get("409").getContent().get("application/json").getExamples()
+                .containsKey("insufficient-stock"));
+    }
 }
