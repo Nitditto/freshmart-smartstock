@@ -48,6 +48,17 @@ class AuthAndRoleIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void meReturnsCurrentUserAndNeverReturnsPasswordHash() throws Exception {
+        String token = loginAndGetToken("staff@test.local");
+
+        mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.email").value("staff@test.local"))
+                .andExpect(jsonPath("$.data.role").value("STAFF"))
+                .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
+    }
+
+    @Test
     void wrongPasswordUnknownEmailAndLockedAccountAllReturnTheSame401() throws Exception {
         for (String[] attempt : new String[][]{
                 {"admin@test.local", "wrong-password"},

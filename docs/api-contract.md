@@ -57,9 +57,9 @@ Cột **Owner**: A/B/C/D/E theo `docs/plans/member-*.md`. Trạng thái trong sk
 | POST `/api/auth/login` | Cấp JWT | public | 200, 400, 401 | D | ✅ |
 | GET `/api/auth/me` | User hiện tại | any | 200, 401 | D | ✅ |
 | PATCH `/api/auth/password` | Đổi mật khẩu `{currentPassword,newPassword}`; sai mật khẩu cũ hoặc mới trùng cũ → 400; mới 8–72 ký tự | any | 200, 400, 401 | D | ✅ |
-| GET `/api/users` | Danh sách tài khoản | ADMIN | 200, 401, 403 | D | 🧩 |
-| POST `/api/users` | Tạo tài khoản | ADMIN | 201, 400, 401, 403, 409 | D | 🧩 |
-| PATCH `/api/users/{id}/status` | Khóa/mở khóa | ADMIN | 200, 400, 401, 403, 404, 409 | D | 🧩 |
+| GET `/api/users` | Danh sách tài khoản | ADMIN | 200, 401, 403 | D | ✅ |
+| POST `/api/users` | Tạo tài khoản | ADMIN | 201, 400, 401, 403, 409 | D | ✅ |
+| PATCH `/api/users/{id}/status` | Khóa/mở khóa | ADMIN | 200, 400, 401, 403, 404, 409 | D | ✅ |
 | GET `/api/categories` | Danh sách danh mục | any | 200, 401 | B | ✅ |
 | POST `/api/categories` | Tạo danh mục | ADMIN | 201, 400, 401, 403, 409 | B | ✅ |
 | GET `/api/products` | Tìm/lọc/sắp xếp/phân trang | any | 200, 400, 401 | B | 🧩 |
@@ -70,12 +70,12 @@ Cột **Owner**: A/B/C/D/E theo `docs/plans/member-*.md`. Trạng thái trong sk
 | GET `/api/suppliers` | Danh sách NCC | any | 200, 401 | B | 🧩 |
 | POST `/api/suppliers` | Tạo NCC | ADMIN | 201, 400, 401, 403 | B | 🧩 |
 | PUT `/api/suppliers/{id}` | Sửa NCC | ADMIN | 200, 400, 401, 403, 404 | B | 🧩 |
-| POST `/api/receipts` | Tạo phiếu nhập nhiều dòng (DRAFT) | any | 201, 400, 401, 404 | D | 🧩 |
-| GET `/api/receipts` | Danh sách (lọc ngày/trạng thái) | any | 200, 401 | D | 🧩 |
-| GET `/api/receipts/{id}` | Chi tiết phiếu | any | 200, 401, 404 | D | 🧩 |
-| PUT `/api/receipts/{id}` | Sửa phiếu DRAFT | owner/ADMIN | 200, 400, 401, 403, 404, 409 | D | 🧩 |
-| PATCH `/api/receipts/{id}/confirm` | Xác nhận → tăng tồn | owner/ADMIN | 200, 401, 403, 404, 409 | D | 🧩 |
-| PATCH `/api/receipts/{id}/cancel` | Hủy phiếu DRAFT | owner/ADMIN | 200, 401, 403, 404, 409 | D | 🧩 |
+| POST `/api/receipts` | Tạo phiếu nhập nhiều dòng (DRAFT) | any | 201, 400, 401, 404 | D | ✅ |
+| GET `/api/receipts` | Danh sách (lọc ngày/trạng thái) | any | 200, 401 | D | ✅ |
+| GET `/api/receipts/{id}` | Chi tiết phiếu | any | 200, 401, 404 | D | ✅ |
+| PUT `/api/receipts/{id}` | Sửa phiếu DRAFT | owner/ADMIN | 200, 400, 401, 403, 404, 409 | D | ✅ |
+| PATCH `/api/receipts/{id}/confirm` | Xác nhận → tăng tồn | owner/ADMIN | 200, 401, 403, 404, 409 | D | ✅ |
+| PATCH `/api/receipts/{id}/cancel` | Hủy phiếu DRAFT | owner/ADMIN | 200, 401, 403, 404, 409 | D | ✅ |
 | POST `/api/receipts/parse` | LLM: gợi ý phiếu từ hóa đơn text | any | 200, 400, 401, 503 | E | 🧩 |
 | POST `/api/issues` | Tạo phiếu xuất (DRAFT) | any | 201, 400, 401, 404 | C | 🧩 |
 | GET `/api/issues` | Danh sách phiếu xuất | any | 200, 401 | C | 🧩 |
