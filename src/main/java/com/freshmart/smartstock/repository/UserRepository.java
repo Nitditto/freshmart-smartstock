@@ -9,4 +9,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmailIgnoreCase(String email);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    /** One cheap indexed lookup per request: lets the JWT filter reject tokens of locked or deleted users. */
+    boolean existsByIdAndActiveTrue(Long id);
 }

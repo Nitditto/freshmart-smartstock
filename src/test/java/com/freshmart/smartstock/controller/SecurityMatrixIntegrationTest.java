@@ -6,7 +6,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.freshmart.smartstock.config.AppProperties;
+import com.freshmart.smartstock.domain.entity.User;
 import com.freshmart.smartstock.domain.enums.Role;
+import com.freshmart.smartstock.repository.UserRepository;
 import com.freshmart.smartstock.security.AuthUser;
 import com.freshmart.smartstock.security.JwtService;
 import com.freshmart.smartstock.support.AbstractIntegrationTest;
@@ -14,6 +16,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -43,15 +46,24 @@ class SecurityMatrixIntegrationTest extends AbstractIntegrationTest {
     private static final String STATUS = "{\"active\":true}";
     private static final String PARSE = "{\"text\":\"x\"}";
 
-    private static final long STAFF_ID = 900_001L;
-    private static final long ADMIN_ID = 900_002L;
-
     @Autowired
     private JwtService jwtService;
     @Autowired
     private AppProperties properties;
+    @Autowired
+    private UserRepository userRepository;
     @Value("${app.jwt.secret}")
     private String secret;
+
+    private long staffId;
+    private long adminId;
+
+    /** The JWT filter rejects tokens of users that do not exist or are locked, so the tokens need real accounts. */
+    @BeforeEach
+    void createUsers() {
+        staffId = saveUser(Role.STAFF).getId();
+        adminId = saveUser(Role.ADMIN).getId();
+    }
 
     /** (method, path, body, adminOnly). */
     static Stream<Arguments> endpoints() {
@@ -93,7 +105,7 @@ class SecurityMatrixIntegrationTest extends AbstractIntegrationTest {
     @MethodSource("endpoints")
     void staffGets403OnlyOnAdminEndpoints(HttpMethod method, String path, String body, boolean adminOnly)
             throws Exception {
-        String token = bearer(jwtService, STAFF_ID, Role.STAFF);
+        String token = bearer(jwtService, staffId, Role.STAFF);
         if (adminOnly) {
             mockMvc.perform(call(method, path, body, token))
                     .andExpect(status().isForbidden())
@@ -107,7 +119,7 @@ class SecurityMatrixIntegrationTest extends AbstractIntegrationTest {
     @MethodSource("endpoints")
     void adminIsNeverRejectedByTheRoleCheck(HttpMethod method, String path, String body, boolean adminOnly)
             throws Exception {
-        assertNotAuthError(method, path, body, bearer(jwtService, ADMIN_ID, Role.ADMIN));
+        assertNotAuthError(method, path, body, bearer(jwtService, adminId, Role.ADMIN));
     }
 
     @Test
@@ -120,7 +132,7 @@ class SecurityMatrixIntegrationTest extends AbstractIntegrationTest {
         Instant longAgo = Instant.parse("2020-01-01T00:00:00Z");
         JwtService past = new JwtService(propsWithSecret(secret), Clock.fixed(longAgo, ZoneOffset.UTC));
 
-        mockMvc.perform(call(HttpMethod.GET, "/api/auth/me", null, bearer(past, STAFF_ID, Role.STAFF)))
+        mockMvc.perform(call(HttpMethod.GET, "/api/auth/me", null, bearer(past, staffId, Role.STAFF)))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -129,7 +141,7 @@ class SecurityMatrixIntegrationTest extends AbstractIntegrationTest {
         JwtService forged = new JwtService(propsWithSecret("another-secret-another-secret-another-0123"),
                 Clock.systemUTC());
 
-        mockMvc.perform(call(HttpMethod.GET, "/api/auth/me", null, bearer(forged, ADMIN_ID, Role.ADMIN)))
+        mockMvc.perform(call(HttpMethod.GET, "/api/auth/me", null, bearer(forged, adminId, Role.ADMIN)))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -161,6 +173,16 @@ class SecurityMatrixIntegrationTest extends AbstractIntegrationTest {
 
     private static String bearer(JwtService service, long id, Role role) {
         return "Bearer " + service.generateToken(new AuthUser(id, "u" + id + "@test.local", role));
+    }
+
+    private User saveUser(Role role) {
+        User user = new User();
+        user.setFullName("Matrix " + role);
+        user.setEmail("matrix" + System.nanoTime() + "@freshmart.test");
+        user.setPasswordHash("{not-a-real-hash}");
+        user.setRole(role);
+        user.setActive(true);
+        return userRepository.save(user);
     }
 
     private AppProperties propsWithSecret(String jwtSecret) {
