@@ -1,6 +1,6 @@
 # ERD - SmartStock
 
-> Owner: Member A. Schema thật nằm ở `src/main/resources/db/migration/V1__init_schema.sql` (Flyway). Hình nộp: `docs/erd.png` (nguồn vector `docs/erd.svg`, mở/sửa được bằng trình duyệt hoặc draw.io), vẽ đúng 9 bảng và mọi FK của V1.
+> Owner: Member A. Schema thật nằm ở `src/main/resources/db/migration/V1__init_schema.sql` (Flyway). Hình nộp: `docs/erd.png`, vẽ bằng dbdiagram.io, đúng 9 bảng và mọi FK của V1.
 
 ![ERD](erd.png)
 
