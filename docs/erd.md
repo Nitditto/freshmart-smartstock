@@ -110,3 +110,20 @@ erDiagram
 
 ## Index đã có trong V1
 `products(category_id)`, `products(name)`, `products(is_active, quantity_in_stock, min_stock)` (low-stock), `stock_receipts(status, created_at)`, `stock_receipts(created_by)`, tương tự cho `stock_issues`, và index theo `product_id` trên hai bảng detail (lịch sử sản phẩm).
+
+### Kết quả `EXPLAIN` (MySQL 8.0, 24/11/2026)
+Dữ liệu thử: 200 sản phẩm (5 danh mục, 10 sản phẩm ẩn), 2 000 phiếu nhập, mỗi phiếu 1 dòng; đã chạy `ANALYZE TABLE`.
+
+| Truy vấn | Index được chọn | `type` / rows | Nhận xét |
+|---|---|---|---|
+| Tìm sản phẩm theo danh mục + từ khóa (`ProductRepository.search`) | `idx_products_category` | `ref` / 40 | Lọc danh mục bằng index; `LIKE '%kw%'` không dùng được B-tree nên lọc tiếp trên 40 dòng. **Giới hạn đã biết**, chấp nhận với ~200 sản phẩm. |
+| Low-stock (`findLowStock`) | không dùng | `ALL` / 200 + filesort | `quantity_in_stock <= min_stock` so sánh **hai cột** nên không dò được bằng range; `is_active` chỉ có 2 giá trị. Quét 200 dòng < 1 ms → không thêm index. |
+| Danh sách phiếu theo trạng thái + khoảng ngày | `idx_stock_receipts_status_created` | `range` / 56 | Đúng thiết kế: lọc `status` rồi `created_at`, đọc ngược index cho `ORDER BY created_at DESC`. |
+| Lịch sử một sản phẩm (detail ⨝ phiếu) | `idx_receipt_details_product` + `PRIMARY` | `ref` / 10 + `eq_ref` | Index `product_id` trên bảng detail là index quan trọng nhất cho lịch sử và báo cáo. |
+
+Kết luận: chưa cần `V2__add_indexes.sql`. Nếu báo cáo `stock-summary` chậm khi dữ liệu lớn, ứng viên đầu tiên là `stock_receipts(status, confirmed_at)` / `stock_issues(status, confirmed_at)` vì báo cáo lọc theo `confirmed_at`.
+
+### Kiểm chứng entity ↔ schema
+- `SchemaMappingTest` khởi động app với `ddl-auto=validate` trên MySQL thật (Testcontainers): entity lệch migration → test đỏ ngay, không đợi lúc chạy.
+- `RepositoryQueryIntegrationTest` kiểm các query tự viết và ràng buộc DB (UNIQUE `(receipt_id, product_id)`, UNIQUE `(prefix, counter_date)`, `CHECK quantity_in_stock >= 0`).
+- Lưu ý: MySQL báo vi phạm `CHECK` bằng mã 3819, Spring **không** dịch thành `DataIntegrityViolationException` mà thành `JpaSystemException` → nếu lọt tới đó API trả 500. Vì vậy `CHECK` chỉ là lớp chặn cuối; service phải tự kiểm tồn trước khi trừ.
