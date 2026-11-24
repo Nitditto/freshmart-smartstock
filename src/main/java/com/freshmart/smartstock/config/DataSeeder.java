@@ -22,14 +22,20 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Dev/demo seed (enabled by profile `dev`, property app.seed.enabled=true). Idempotent: skips if data exists.
  * Target (spec): 1 ADMIN, 2 STAFF, 5 categories, 30 products, 3 suppliers, 10 documents.
- * Part 1 (this file): users, categories, products, suppliers.
- * TODO[Member A] Part 2 (after Member C merges): create ~10 receipts/issues by calling
- *   ReceiptService/IssueService so stock is produced by real confirmed documents, not by direct UPDATEs.
+ * Part 1 (this file): users, categories, products (stock 0), suppliers.
+ * Part 2 ({@link SampleDocumentSeeder}): documents; their confirmation is the only source of stock.
  */
 @Component
 @ConditionalOnProperty(prefix = "app.seed", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class DataSeeder implements CommandLineRunner {
+
+    static final String ADMIN_EMAIL = "admin@freshmart.local";
+    static final String STAFF1_EMAIL = "staff1@freshmart.local";
+    static final String STAFF2_EMAIL = "staff2@freshmart.local";
+    static final String SUPPLIER_FARM = "Công ty Nông sản Xanh";
+    static final String SUPPLIER_FRESH = "Công ty Thực phẩm Tươi Sống Việt";
+    static final String SUPPLIER_DRINKS = "Đại lý Đồ uống Miền Nam";
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
@@ -39,6 +45,7 @@ public class DataSeeder implements CommandLineRunner {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
+    private final SampleDocumentSeeder documentSeeder;
 
     @Override
     @Transactional
@@ -57,15 +64,18 @@ public class DataSeeder implements CommandLineRunner {
         if (supplierRepository.count() == 0) {
             seedSuppliers();
         }
+        if (!documentSeeder.hasDocuments()) {
+            documentSeeder.seed();
+        }
         log.info("Seed finished: users={}, categories={}, products={}, suppliers={}",
                 userRepository.count(), categoryRepository.count(),
                 productRepository.count(), supplierRepository.count());
     }
 
     private void seedUsers(String password) {
-        userRepository.save(newUser("Admin FreshMart", "admin@freshmart.local", Role.ADMIN, password));
-        userRepository.save(newUser("Nhân viên kho 1", "staff1@freshmart.local", Role.STAFF, password));
-        userRepository.save(newUser("Nhân viên kho 2", "staff2@freshmart.local", Role.STAFF, password));
+        userRepository.save(newUser("Admin FreshMart", ADMIN_EMAIL, Role.ADMIN, password));
+        userRepository.save(newUser("Nhân viên kho 1", STAFF1_EMAIL, Role.STAFF, password));
+        userRepository.save(newUser("Nhân viên kho 2", STAFF2_EMAIL, Role.STAFF, password));
     }
 
     private User newUser(String fullName, String email, Role role, String rawPassword) {
@@ -118,9 +128,9 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedSuppliers() {
-        supplierRepository.save(newSupplier("Công ty Nông sản Xanh", "0901000001", "Đà Lạt, Lâm Đồng"));
-        supplierRepository.save(newSupplier("Công ty Thực phẩm Tươi Sống Việt", "0901000002", "Quận 7, TP.HCM"));
-        supplierRepository.save(newSupplier("Đại lý Đồ uống Miền Nam", "0901000003", "Thủ Đức, TP.HCM"));
+        supplierRepository.save(newSupplier(SUPPLIER_FARM, "0901000001", "Đà Lạt, Lâm Đồng"));
+        supplierRepository.save(newSupplier(SUPPLIER_FRESH, "0901000002", "Quận 7, TP.HCM"));
+        supplierRepository.save(newSupplier(SUPPLIER_DRINKS, "0901000003", "Thủ Đức, TP.HCM"));
     }
 
     private Supplier newSupplier(String name, String phone, String address) {
