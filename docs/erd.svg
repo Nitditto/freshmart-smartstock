@@ -211,9 +211,9 @@
 <text x="1780" y="715" class="type" text-anchor="end">INT</text>
 <text x="1470" y="737" class="note">UNIQUE (prefix, counter_date) - mã reset mỗi ngày</text>
 </g>
-<text x="80" y="790" class="h1">SmartStock (FreshMart) – ERD</text>
-<text x="80" y="818" class="legend">Nguồn: src/main/resources/db/migration/V1__init_schema.sql (Flyway). Mọi quan hệ đều 1 – N, không có 1 – 1.</text>
-<text x="80" y="838" class="legend">PK khóa chính · FK khóa ngoại · UK duy nhất · đường nối: phía N là cột FK, phía 1 (chấm tròn) là PK được tham chiếu.</text>
-<text x="80" y="858" class="legend">Tồn kho chỉ đổi khi xác nhận chứng từ; *_details tách header/detail để một phiếu có nhiều dòng (xóa phiếu → xóa dòng: ON DELETE CASCADE).</text>
+<text x="80" y="790" class="h1">SmartStock (FreshMart) - ERD</text>
+<text x="80" y="818" class="legend">Nguồn: src/main/resources/db/migration/V1__init_schema.sql (Flyway). Mọi quan hệ đều 1-N, không có 1-1.</text>
+<text x="80" y="838" class="legend">PK: khóa chính, FK: khóa ngoại, UK: duy nhất. Đường nối: phía N là cột FK, phía 1 (chấm tròn) là PK được tham chiếu.</text>
+<text x="80" y="858" class="legend">Tồn kho chỉ đổi khi xác nhận chứng từ; *_details tách header/detail để một phiếu có nhiều dòng (xóa phiếu thì xóa dòng: ON DELETE CASCADE).</text>
 <text x="80" y="878" class="legend">Thời gian lưu UTC (DATETIME(6)); tiền DECIMAL(18,2); xóa sản phẩm = ẩn (is_active = false).</text>
 </svg>
