@@ -5,10 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.freshmart.smartstock.common.api.PageResponse;
 import com.freshmart.smartstock.common.exception.ApiException;
 import com.freshmart.smartstock.domain.entity.Category;
 import com.freshmart.smartstock.domain.entity.Product;
@@ -21,6 +24,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -28,6 +32,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,6 +51,177 @@ class ProductServiceImplTest {
 
     @InjectMocks
     private ProductServiceImpl service;
+
+    @Test
+    void searchReturnsPagedResponseMatchingKeywordAndCategory() {
+        Category category = new Category();
+        category.setId(1L);
+        category.setName("Rau củ");
+
+        Product p1 = new Product();
+        p1.setId(1L);
+        p1.setSku("RC-001");
+        p1.setName("Cà chua bi");
+        p1.setCategory(category);
+        p1.setUnit("hộp");
+        p1.setPrice(BigDecimal.valueOf(25000));
+        p1.setQuantityInStock(20);
+        p1.setMinStock(5);
+        p1.setActive(true);
+
+        Product p2 = new Product();
+        p2.setId(2L);
+        p2.setSku("RC-002");
+        p2.setName("Cà chua beef");
+        p2.setCategory(category);
+        p2.setUnit("kg");
+        p2.setPrice(BigDecimal.valueOf(35000));
+        p2.setQuantityInStock(15);
+        p2.setMinStock(5);
+        p2.setActive(true);
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("price").descending());
+        when(productRepository.search("cà chua", 1L, true, pageable))
+                .thenReturn(new PageImpl<>(List.of(p1, p2), pageable, 2));
+
+        PageResponse<ProductResponse> response = service.search("  cà chua  ", 1L, pageable);
+
+        assertEquals(2, response.items().size());
+        assertEquals(0, response.page());
+        assertEquals(10, response.size());
+        assertEquals(2L, response.totalElements());
+        assertEquals(1, response.totalPages());
+        assertEquals("RC-001", response.items().get(0).sku());
+        assertEquals("RC-002", response.items().get(1).sku());
+    }
+
+    @Test
+    void searchConvertsBlankKeywordToNull() {
+        Pageable pageable = PageRequest.of(0, 20);
+        when(productRepository.search(isNull(), eq(2L), eq(true), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        PageResponse<ProductResponse> response = service.search("   ", 2L, pageable);
+
+        assertTrue(response.items().isEmpty());
+        verify(productRepository).search(isNull(), eq(2L), eq(true), any(Pageable.class));
+    }
+
+    @Test
+    void searchRejectsSortFieldNotInWhitelistWith400() {
+        Pageable unsafePageable = PageRequest.of(0, 20, Sort.by("passwordHash"));
+
+        ApiException exception = assertThrows(ApiException.class, () ->
+                service.search("rau", null, unsafePageable));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+        verify(productRepository, never()).search(any(), any(), any(Boolean.class), any());
+    }
+
+    @Test
+    void searchRejectsSortFieldLikeCategoryWith400() {
+        Pageable unsafePageable = PageRequest.of(0, 20, Sort.by("category"));
+
+        ApiException exception = assertThrows(ApiException.class, () ->
+                service.search(null, null, unsafePageable));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+        verify(productRepository, never()).search(any(), any(), any(Boolean.class), any());
+    }
+
+    @Test
+    void searchRejectsPageSizeExceedingMaxWith400() {
+        Pageable oversizePageable = PageRequest.of(0, 101);
+
+        ApiException exception = assertThrows(ApiException.class, () ->
+                service.search(null, null, oversizePageable));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+        assertEquals("size tối đa là 100", exception.getMessage());
+        verify(productRepository, never()).search(any(), any(), any(Boolean.class), any());
+    }
+
+    @Test
+    void searchAllowsValidSortFieldsInWhitelist() {
+        Pageable sortPrice = PageRequest.of(0, 20, Sort.by("price").descending());
+        when(productRepository.search(isNull(), isNull(), eq(true), eq(sortPrice)))
+                .thenReturn(new PageImpl<>(List.of(), sortPrice, 0));
+
+        PageResponse<ProductResponse> response = service.search(null, null, sortPrice);
+        assertTrue(response.items().isEmpty());
+
+        Pageable sortStock = PageRequest.of(0, 20, Sort.by("quantityInStock").ascending());
+        when(productRepository.search(isNull(), isNull(), eq(true), eq(sortStock)))
+                .thenReturn(new PageImpl<>(List.of(), sortStock, 0));
+
+        PageResponse<ProductResponse> responseStock = service.search(null, null, sortStock);
+        assertTrue(responseStock.items().isEmpty());
+    }
+
+    @Test
+    void searchAlwaysPassesOnlyActiveTrue() {
+        Pageable pageable = PageRequest.of(0, 20);
+        when(productRepository.search(eq("thịt"), isNull(), eq(true), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        service.search("thịt", null, pageable);
+
+        verify(productRepository).search(eq("thịt"), isNull(), eq(true), any(Pageable.class));
+    }
+
+    @Test
+    void searchAcceptsUpperBoundaryPageSize100() {
+        Pageable maxPageable = PageRequest.of(0, 100);
+        when(productRepository.search(isNull(), isNull(), eq(true), eq(maxPageable)))
+                .thenReturn(new PageImpl<>(List.of(), maxPageable, 0));
+
+        PageResponse<ProductResponse> response = service.search(null, null, maxPageable);
+
+        assertEquals(0, response.page());
+        assertEquals(100, response.size());
+    }
+
+    @Test
+    void searchHandlesNullAndEmptyKeywordWithoutNpe() {
+        Pageable pageable = PageRequest.of(0, 20);
+        when(productRepository.search(isNull(), eq(1L), eq(true), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        PageResponse<ProductResponse> responseNull = service.search(null, 1L, pageable);
+        assertTrue(responseNull.items().isEmpty());
+
+        PageResponse<ProductResponse> responseEmpty = service.search("", 1L, pageable);
+        assertTrue(responseEmpty.items().isEmpty());
+    }
+
+    @Test
+    void searchHandlesUnpagedByEnforcingMaxPageSize() {
+        Pageable expectedPageable = PageRequest.of(0, 100);
+        when(productRepository.search(isNull(), isNull(), eq(true), eq(expectedPageable)))
+                .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
+
+        PageResponse<ProductResponse> response = service.search(null, null, Pageable.unpaged());
+
+        assertEquals(0, response.page());
+        assertEquals(100, response.size());
+        verify(productRepository).search(isNull(), isNull(), eq(true), eq(expectedPageable));
+    }
+
+    @Test
+    void searchAllowsAllSortFieldsInWhitelistAscAndDesc() {
+        List<String> sortFields = List.of("id", "sku", "name", "price", "quantityInStock");
+        for (String field : sortFields) {
+            Pageable asc = PageRequest.of(0, 10, Sort.by(field).ascending());
+            when(productRepository.search(isNull(), isNull(), eq(true), eq(asc)))
+                    .thenReturn(new PageImpl<>(List.of(), asc, 0));
+            service.search(null, null, asc);
+
+            Pageable desc = PageRequest.of(0, 10, Sort.by(field).descending());
+            when(productRepository.search(isNull(), isNull(), eq(true), eq(desc)))
+                    .thenReturn(new PageImpl<>(List.of(), desc, 0));
+            service.search(null, null, desc);
+        }
+    }
 
     @Test
     void getReturnsProductWhenExistsIncludingInactive() {
