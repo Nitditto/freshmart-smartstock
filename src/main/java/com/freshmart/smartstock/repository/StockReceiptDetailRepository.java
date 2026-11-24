@@ -1,11 +1,17 @@
 package com.freshmart.smartstock.repository;
 
 import com.freshmart.smartstock.domain.entity.StockReceiptDetail;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-/**
- * TODO[Member B / E]: add the read-only queries for product history (/api/products/{id}/history)
- * and the stock-summary report. Both must only count lines of CONFIRMED documents.
- */
 public interface StockReceiptDetailRepository extends JpaRepository<StockReceiptDetail, Long> {
+
+    @Query("""
+            select d from StockReceiptDetail d join fetch d.receipt r
+            where d.product.id = :productId and r.status = com.freshmart.smartstock.domain.enums.DocumentStatus.CONFIRMED
+            order by r.confirmedAt desc, d.id desc
+            """)
+    List<StockReceiptDetail> findConfirmedByProductId(@Param("productId") Long productId);
 }
