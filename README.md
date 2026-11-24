@@ -33,6 +33,16 @@ cp src/main/resources/application-local.example.yml src/main/resources/applicati
 mvn spring-boot:run -Dspring-boot.run.profiles=dev,local
 ```
 
+### LLM thật cho `POST /api/receipts/parse` (Ollama, chạy trên máy, không cần API key)
+Mặc định không có key → `MockLlmService`. Muốn dùng model thật:
+```bash
+ollama pull qwen2.5:3b                                            # một lần
+mvn spring-boot:run -Dspring-boot.run.profiles=dev,local,ollama   # profile `ollama` = application-ollama.yml
+```
+- Đổi model/địa chỉ bằng biến môi trường `LLM_MODEL`, `LLM_BASE_URL` (Docker: `http://host.docker.internal:11434/v1`).
+- Phản hồi có `"mock": false` là đang dùng model thật. Ollama tắt → API trả **503**, nhập tay vẫn dùng được.
+- Dùng nhà cung cấp trên mạng (OpenAI, Groq, Gemini...) thì đặt `app.llm.api-key/base-url/model` trong `application-local.yml` hoặc biến `LLM_API_KEY`; **không bao giờ commit key**.
+
 ### Migration (thay cho `dotnet ef database update`)
 Flyway **tự chạy** các file trong `src/main/resources/db/migration/` mỗi lần ứng dụng khởi động, nên chỉ cần khởi động ứng dụng là DB được tạo/cập nhật. Quy tắc phiên bản migration: xem `docs/git-flow.md`.
 

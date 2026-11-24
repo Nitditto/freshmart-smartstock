@@ -10,4 +10,4 @@ app:
   jwt:
     secret: replace-with-a-random-string-of-at-least-32-characters
   llm:
-    api-key: ""   # put your real key here; leave empty to use the mock
+    api-key: ""   # cloud provider key; leave empty for the mock. Local Ollama: use profile `ollama` instead
