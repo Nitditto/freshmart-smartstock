@@ -49,6 +49,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -473,5 +474,82 @@ class IssueServiceImplTest {
 
         assertEquals(DocumentStatus.CANCELLED, issue.getStatus());
         verify(issueRepository).save(issue);
+    }
+
+    // ==================== GAPS FROM THE PLAN (member-c §5) ====================
+
+    @Test
+    void searchRejectsSortOutsideTheWhitelistWith400() {
+        ApiException ex = assertThrows(ApiException.class, () -> service.search(
+                null, null, null, PageRequest.of(0, 10, Sort.by("passwordHash"))));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        verify(issueRepository, never()).search(any(), any(), any(), any());
+    }
+
+    @Test
+    void searchRejectsPageSizeAboveTheLimitWith400() {
+        ApiException ex = assertThrows(ApiException.class,
+                () -> service.search(null, null, null, PageRequest.of(0, 1000)));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+    }
+
+    @Test
+    void updateConfirmAndCancelReturn404ForUnknownIssue() {
+        when(issueRepository.findByIdForUpdate(77L)).thenReturn(Optional.empty());
+        IssueRequest request = new IssueRequest(IssueReason.SALE, null,
+                List.of(new IssueLineRequest(activeProduct1.getId(), 1)));
+
+        assertEquals(HttpStatus.NOT_FOUND,
+                assertThrows(ApiException.class, () -> service.update(77L, request)).getStatus());
+        assertEquals(HttpStatus.NOT_FOUND, assertThrows(ApiException.class, () -> service.confirm(77L)).getStatus());
+        assertEquals(HttpStatus.NOT_FOUND, assertThrows(ApiException.class, () -> service.cancel(77L)).getStatus());
+    }
+
+    @Test
+    void adminCanUpdateAnotherStaffsDraftAndLinesAreReplaced() {
+        setAuthUser(1L, "admin@freshmart.local", Role.ADMIN);
+        StockIssue issue = draftIssue(activeProduct1, 3);
+        when(issueRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(issue));
+        when(productRepository.findAllById(any())).thenReturn(List.of(activeProduct2));
+        when(issueRepository.findById(5L)).thenReturn(Optional.of(issue));
+
+        IssueResponse response = service.update(5L, new IssueRequest(IssueReason.INTERNAL, "  ghi chú  ",
+                List.of(new IssueLineRequest(activeProduct2.getId(), 4))));
+
+        assertEquals(IssueReason.INTERNAL, response.reason());
+        assertEquals("ghi chú", issue.getNote());
+        assertEquals(1, issue.getDetails().size());
+        assertEquals(activeProduct2, issue.getDetails().get(0).getProduct());
+        verify(issueRepository).saveAndFlush(issue);
+    }
+
+    @Test
+    void stockLandingExactlyOnMinStockCountsAsNewlyLow() {
+        StockIssue issue = draftIssue(activeProduct2, 15);
+        when(issueRepository.findByIdForUpdate(5L)).thenReturn(Optional.of(issue));
+        when(productRepository.findAllByIdForUpdate(anyList())).thenReturn(List.of(activeProduct2));
+        when(issueRepository.findById(5L)).thenReturn(Optional.of(issue));
+
+        IssueConfirmResponse response = service.confirm(5L);
+
+        assertEquals(5, activeProduct2.getQuantityInStock());
+        assertEquals(List.of(102L), response.newlyLowStock().stream().map(i -> i.productId()).toList());
+    }
+
+    private StockIssue draftIssue(Product product, int quantity) {
+        StockIssue issue = new StockIssue();
+        issue.setId(5L);
+        issue.setCode("PX-20261121-005");
+        issue.setReason(IssueReason.SALE);
+        issue.setStatus(DocumentStatus.DRAFT);
+        issue.setCreatedBy(staffUser);
+        issue.setCreatedAt(clock.instant());
+        StockIssueDetail detail = new StockIssueDetail();
+        detail.setProduct(product);
+        detail.setQuantity(quantity);
+        issue.addDetail(detail);
+        return issue;
     }
 }
