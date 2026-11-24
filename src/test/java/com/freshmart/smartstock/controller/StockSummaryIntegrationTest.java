@@ -1,7 +1,10 @@
 package com.freshmart.smartstock.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,6 +22,7 @@ import com.freshmart.smartstock.repository.UserRepository;
 import com.freshmart.smartstock.support.AbstractIntegrationTest;
 import com.freshmart.smartstock.support.TestData;
 import com.jayway.jsonpath.JsonPath;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -107,6 +111,37 @@ class StockSummaryIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/reports/stock-summary" + PERIOD))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void adminDownloadsCsvWithBomAndAttachmentName() throws Exception {
+        Product product = data.product(0, 0);
+        data.receipt(admin, product, 12, DocumentStatus.CONFIRMED, PERIOD_START.plusSeconds(60));
+
+        byte[] csv = mockMvc.perform(get("/api/reports/stock-summary/export" + PERIOD)
+                        .header(HttpHeaders.AUTHORIZATION, token(admin)))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "text/csv;charset=UTF-8"))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"stock-summary_2026-11-20_2026-11-22.csv\""))
+                .andReturn().getResponse().getContentAsByteArray();
+
+        assertEquals((byte) 0xEF, csv[0]);
+        String text = new String(csv, 3, csv.length - 3, StandardCharsets.UTF_8);
+        assertTrue(text.startsWith("Mã SP,SKU,Tên sản phẩm,Tồn đầu,Nhập,Xuất,Tồn cuối\r\n"));
+        assertTrue(text.contains("%d,%s,%s,0,12,0,12\r\n".formatted(product.getId(), product.getSku(),
+                product.getName())));
+    }
+
+    @Test
+    void exportIsAdminOnlyAndValidatesThePeriodAsJson() throws Exception {
+        mockMvc.perform(get("/api/reports/stock-summary/export" + PERIOD)
+                        .header(HttpHeaders.AUTHORIZATION, token(loginUser(Role.STAFF))))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/reports/stock-summary/export?from=2026-11-23&to=2026-11-20")
+                        .header(HttpHeaders.AUTHORIZATION, token(admin)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     private User loginUser(Role role) {

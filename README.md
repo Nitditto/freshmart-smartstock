@@ -7,7 +7,7 @@ Backend quản lý kho cho FreshMart: mọi thay đổi tồn kho đi qua **phi�
 **Trạng thái:** cột Trạng thái trong `docs/api-contract.md` mục 3 là nguồn chính xác (`Xong` hoặc `Chưa`, `Chưa` nghĩa là còn trả 501).
 - Đã xong: đăng nhập/JWT, phân quyền, đổi mật khẩu, quản lý tài khoản, danh mục.
 - Đã xong: phiếu nhập và phiếu xuất (tạo/sửa/xác nhận/hủy; khóa dòng khi xác nhận nên không bán lố, thiếu tồn -> 409 + danh sách thiếu).
-- Đã xong: báo cáo `stock-summary`, LLM `POST /api/receipts/parse` (mock hoặc Ollama), seed 10 chứng từ.
+- Đã xong: báo cáo `stock-summary` (JSON và CSV), LLM `POST /api/receipts/parse` (mock hoặc Ollama), seed 10 chứng từ.
 - Chưa xong: sản phẩm, nhà cung cấp, low-stock, lịch sử sản phẩm (Member B - đang ở PR).
 
 ## 1. Chạy nhanh bằng Docker Compose (khuyến nghị)
@@ -66,6 +66,7 @@ Dữ liệu seed (chạy khi DB trống, chạy lại không nhân đôi): 1 ADM
 1. `POST /api/auth/login` -> copy `data.accessToken`.
 2. Bấm **Authorize** (góc phải trên) -> dán token (không cần gõ chữ `Bearer`).
 3. Gọi các API. STAFF gọi API của ADMIN sẽ nhận **403**.
+4. Xuất báo cáo tồn ra Excel (ADMIN): `GET /api/reports/stock-summary/export?from=2026-11-01&to=2026-11-30` rồi bấm *Download file*.
 
 ## 4. Test
 ```bash

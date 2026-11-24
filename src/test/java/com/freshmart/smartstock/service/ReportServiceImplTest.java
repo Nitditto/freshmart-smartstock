@@ -2,15 +2,18 @@ package com.freshmart.smartstock.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.freshmart.smartstock.common.exception.ApiException;
 import com.freshmart.smartstock.domain.entity.Product;
 import com.freshmart.smartstock.dto.inventory.StockSummaryItem;
+import com.freshmart.smartstock.dto.report.CsvFile;
 import com.freshmart.smartstock.repository.ReportRepository;
 import com.freshmart.smartstock.repository.ReportRepository.ProductMovement;
 import com.freshmart.smartstock.service.impl.ReportServiceImpl;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -85,6 +88,27 @@ class ReportServiceImplTest {
         List<StockSummaryItem> items = service.stockSummary(FROM, FROM);
 
         assertEquals(new StockSummaryItem(1L, "RCQ-001", "Product RCQ-001", 4, 10, 3, 11), items.get(0));
+    }
+
+    @Test
+    void exportUsesTheSameReportAndNamesTheFileAfterThePeriod() {
+        when(reportRepository.sumConfirmedReceipts(START, END)).thenReturn(List.of(movement(1L, 100, 20)));
+        when(reportRepository.sumConfirmedIssues(START, END)).thenReturn(List.of(movement(1L, 30, 5)));
+        when(reportRepository.findAllProductsOrderById()).thenReturn(List.of(product(1L, "RCQ-001")));
+
+        CsvFile file = service.exportStockSummaryCsv(FROM, TO);
+
+        assertEquals("stock-summary_2026-11-20_2026-11-22.csv", file.fileName());
+        String csv = new String(file.content(), StandardCharsets.UTF_8);
+        assertTrue(csv.endsWith("1,RCQ-001,Product RCQ-001,70,20,5,85\r\n"));
+    }
+
+    @Test
+    void exportRejectsFromAfterToWith400() {
+        ApiException ex = assertThrows(ApiException.class, () -> service.exportStockSummaryCsv(TO, FROM));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        verifyNoInteractions(reportRepository);
     }
 
     private static ProductMovement movement(Long productId, long before, long within) {

@@ -3,6 +3,7 @@ package com.freshmart.smartstock.service.impl;
 import com.freshmart.smartstock.common.exception.ApiException;
 import com.freshmart.smartstock.domain.entity.Product;
 import com.freshmart.smartstock.dto.inventory.StockSummaryItem;
+import com.freshmart.smartstock.dto.report.CsvFile;
 import com.freshmart.smartstock.repository.ReportRepository;
 import com.freshmart.smartstock.repository.ReportRepository.ProductMovement;
 import com.freshmart.smartstock.service.ReportService;
@@ -41,6 +42,13 @@ public class ReportServiceImpl implements ReportService {
         return reportRepository.findAllProductsOrderById().stream()
                 .map(p -> toItem(p, received.get(p.getId()), issued.get(p.getId())))
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CsvFile exportStockSummaryCsv(LocalDate from, LocalDate to) {
+        byte[] content = StockSummaryCsv.write(stockSummary(from, to));
+        return new CsvFile("stock-summary_%s_%s.csv".formatted(from, to), content);
     }
 
     private static Map<Long, ProductMovement> byProduct(List<ProductMovement> movements) {
