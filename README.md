@@ -93,7 +93,7 @@ Xem `docs/architecture.md`. Tóm tắt: `controller -> service -> repository`, D
 | File | Nội dung |
 |---|---|
 | `docs/user-stories.md` | User story + tiêu chí chấp nhận |
-| `docs/erd.md` | ERD (hình `docs/erd.png`, nguồn `docs/erd.svg`, Mermaid) + lý do thiết kế + kết quả `EXPLAIN` |
+| `docs/erd.md` | ERD (hình `docs/erd.png` vẽ bằng dbdiagram, nguồn `docs/erd.dbml`, Mermaid) + lý do thiết kế + kết quả `EXPLAIN` |
 | `docs/architecture.md` | Kiến trúc, MVC vs MSA, luồng, giao dịch/khóa |
 | `docs/api-contract.md` | **Hợp đồng API chung** (endpoint, role, mã lỗi, payload) |
 | `docs/git-flow.md` | Nhánh, PR, commit, tag, cấp phát số migration, lịch |
