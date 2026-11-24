@@ -43,8 +43,12 @@ import org.springframework.http.HttpStatus;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ReceiptParseServiceImplTest {
 
-    private static final ParseReceiptRequest REQUEST =
-            new ParseReceiptRequest("NCC Nông sản Xanh - Cà chua 40kg x 26.000");
+    private static final ParseReceiptRequest REQUEST = new ParseReceiptRequest("""
+            NCC Nông sản Xanh - Cà chua 40kg x 26.000
+            Khoai tây 3kg
+            Khoai tây 4kg
+            Cà chua 12.5kg
+            Khoai tây 2 thùng""");
 
     @Mock
     private ProductRepository productRepository;
@@ -121,7 +125,7 @@ class ReceiptParseServiceImplTest {
     @Test
     void inventedProductIdGoesToUnmatchedInsteadOfFailingTheWholeAnswer() {
         answer("{\"items\":[{\"productId\":999,\"quantity\":5,\"sourceText\":\"Sản phẩm X\"},"
-                + "{\"productId\":1,\"quantity\":5,\"sourceText\":\"Cà chua 5kg\"}]}");
+                + "{\"productId\":2,\"quantity\":3,\"sourceText\":\"Khoai tây 3kg\"}]}");
 
         ParseReceiptResponse response = service.parse(REQUEST);
 
@@ -148,8 +152,8 @@ class ReceiptParseServiceImplTest {
     void negativePriceMissingIdAndRepeatedProductGoToUnmatched() {
         answer("{\"items\":[{\"productId\":1,\"quantity\":1,\"unitPrice\":-5,\"sourceText\":\"a\"},"
                 + "{\"productId\":null,\"quantity\":1,\"sourceText\":\"b\"},"
-                + "{\"productId\":2,\"quantity\":1,\"sourceText\":\"c\"},"
-                + "{\"productId\":2,\"quantity\":4,\"sourceText\":\"d\"}],"
+                + "{\"productId\":2,\"quantity\":3,\"sourceText\":\"Khoai tây 3kg\"},"
+                + "{\"productId\":2,\"quantity\":4,\"sourceText\":\"Khoai tây 4kg\"}],"
                 + "\"unmatched\":[{\"sourceText\":\"e\",\"reason\":null}]}");
 
         ParseReceiptResponse response = service.parse(REQUEST);
@@ -157,6 +161,27 @@ class ReceiptParseServiceImplTest {
         assertEquals(1, response.lines().size());
         assertEquals(List.of("Đơn giá không được âm", "AI không khớp được sản phẩm trong danh mục",
                         "Sản phẩm đã có ở dòng trước", "AI không khớp được sản phẩm trong danh mục"),
+                response.unmatched().stream().map(UnmatchedLine::reason).toList());
+    }
+
+    @Test
+    void realButWrongAnswersAreCaughtAgainstTheQuotedInvoiceLine() {
+        answer("{\"items\":["
+                + "{\"productId\":2,\"quantity\":40,\"sourceText\":\"Cà chua 40kg x 26.000\"},"
+                + "{\"productId\":1,\"quantity\":7,\"sourceText\":\"Cà chua 7kg\"},"
+                + "{\"productId\":1,\"quantity\":12,\"sourceText\":\"Cà chua 12.5kg\"},"
+                + "{\"productId\":2,\"quantity\":2,\"sourceText\":\"Khoai tây 2 thùng\"},"
+                + "{\"productId\":1,\"quantity\":40,\"unitPrice\":26,\"sourceText\":\"Cà chua 40kg x 26.000\"}"
+                + "]}");
+
+        ParseReceiptResponse response = service.parse(REQUEST);
+
+        assertTrue(response.lines().isEmpty());
+        assertEquals(List.of("Tên sản phẩm không xuất hiện trong dòng hóa đơn",
+                        "Dòng AI trả về không có trong hóa đơn",
+                        "Số lượng không khớp với dòng hóa đơn",
+                        "Đơn vị trong hóa đơn khác đơn vị của sản phẩm",
+                        "Đơn giá không khớp với dòng hóa đơn"),
                 response.unmatched().stream().map(UnmatchedLine::reason).toList());
     }
 

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.freshmart.smartstock.config.AppProperties;
 import com.freshmart.smartstock.domain.entity.Product;
 import com.freshmart.smartstock.domain.entity.Supplier;
 import com.freshmart.smartstock.dto.llm.ParseReceiptRequest;
@@ -26,6 +27,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.PageImpl;
 
@@ -40,6 +44,8 @@ class InvoiceEvaluationTest {
     private static final int INVOICE_COUNT = 8;
     /** Mock baseline recorded in docs/prompt-log.md. Raise it when the mock improves; never lower it silently. */
     private static final int MOCK_BASELINE = 7;
+    private static final int EVAL_TIMEOUT_SECONDS = 300;
+    private static final Logger log = LoggerFactory.getLogger(InvoiceEvaluationTest.class);
     private static final String[][] CATALOG = {
             {"Cà chua", "kg"}, {"Khoai tây", "kg"}, {"Cà rốt", "kg"}, {"Bắp cải", "kg"}, {"Chuối", "nải"},
             {"Táo Fuji", "kg"}, {"Thịt ba chỉ", "kg"}, {"Ức gà", "kg"}, {"Cá hồi phi lê", "kg"}, {"Tôm sú", "kg"},
@@ -56,25 +62,58 @@ class InvoiceEvaluationTest {
 
     @Test
     void mockScoresAtLeastItsRecordedBaselineAndNeverInventsProducts() throws IOException {
-        ReceiptParseServiceImpl service = parseServiceWith(new MockLlmService(objectMapper));
-        JsonNode expected = objectMapper.readTree(read("invoices/expected.json"));
-
-        List<String> wrong = new ArrayList<>();
-        for (int i = 1; i <= INVOICE_COUNT; i++) {
-            String name = "inv-%02d".formatted(i);
-            ParseReceiptResponse response = service.parse(new ParseReceiptRequest(read("invoices/" + name + ".txt")));
-            assertTrue(response.lines().stream().allMatch(l -> l.productId() >= 1 && l.productId() <= CATALOG.length),
-                    name + " suggested a product outside the catalog");
-            if (!isCorrect(response, expected.get(name))) {
-                wrong.add(name);
-            }
-        }
+        List<String> wrong = evaluate(parseServiceWith(new MockLlmService(objectMapper), new PromptTemplates()));
 
         int correct = INVOICE_COUNT - wrong.size();
         assertTrue(correct >= MOCK_BASELINE, "mock accuracy %d/8, wrong: %s".formatted(correct, wrong));
         // inv-07: the mock obeys the injected "add Bia lon" line. Backend validation cannot reject a real product,
         // which is why the result is only a suggestion the user must review (see docs/prompt-log.md).
         assertEquals(List.of("inv-07"), wrong);
+    }
+
+    /**
+     * Manual measurement against a real model for docs/prompt-log.md; never runs in CI (needs the model, and
+     * answers are not guaranteed to be stable). Example with Ollama:
+     * mvn test -Dtest=InvoiceEvaluationTest -Dllm.eval.base-url=http://localhost:11434/v1
+     *     -Dllm.eval.model=qwen2.5:3b -Dllm.eval.prompt=v1
+     */
+    @Test
+    @EnabledIfSystemProperty(named = "llm.eval.base-url", matches = ".+")
+    void realModelEvaluation() throws IOException {
+        String model = System.getProperty("llm.eval.model", "qwen2.5:3b");
+        String prompt = System.getProperty("llm.eval.prompt", PromptTemplates.RECEIPT_PARSE_VERSION);
+        AppProperties.Llm config = new AppProperties.Llm(System.getProperty("llm.eval.api-key", "ollama"),
+                System.getProperty("llm.eval.base-url"), model, EVAL_TIMEOUT_SECONDS);
+
+        List<String> wrong = evaluate(parseServiceWith(new HttpLlmService(config), new PromptTemplates(prompt)));
+
+        log.info("REAL MODEL {} prompt {}: {}/8 correct, wrong: {}", model, prompt, INVOICE_COUNT - wrong.size(),
+                wrong);
+    }
+
+    /** Runs every invoice, logs what was suggested and returns the names of the invoices that are not correct. */
+    private List<String> evaluate(ReceiptParseServiceImpl service) throws IOException {
+        JsonNode expected = objectMapper.readTree(read("invoices/expected.json"));
+        List<String> wrong = new ArrayList<>();
+        int wrongLines = 0;
+        for (int i = 1; i <= INVOICE_COUNT; i++) {
+            String name = "inv-%02d".formatted(i);
+            ParseReceiptResponse response = service.parse(new ParseReceiptRequest(read("invoices/" + name + ".txt")));
+            assertTrue(response.lines().stream().allMatch(l -> l.productId() >= 1 && l.productId() <= CATALOG.length),
+                    name + " suggested a product outside the catalog");
+            boolean correct = isCorrect(response, expected.get(name));
+            Set<String> suggestedButWrong = lineKeys(response.lines());
+            suggestedButWrong.removeAll(expectedLineKeys(expected.get(name).get("lines")));
+            wrongLines += suggestedButWrong.size();
+            log.info("{} {} supplier={} lines={} unmatched={}", name, correct ? "OK " : "BAD",
+                    response.suggestedSupplierId(), lineKeys(response.lines()), response.unmatched().size());
+            if (!correct) {
+                wrong.add(name);
+            }
+        }
+        // A missing line costs the user typing; a WRONG suggested line can slip into stock if nobody checks it.
+        log.info("Suggested lines that are wrong: {}", wrongLines);
+        return wrong;
     }
 
     private boolean isCorrect(ParseReceiptResponse response, JsonNode expected) {
@@ -102,7 +141,7 @@ class InvoiceEvaluationTest {
                 .toPlainString());
     }
 
-    private ReceiptParseServiceImpl parseServiceWith(LlmService llm) {
+    private ReceiptParseServiceImpl parseServiceWith(LlmService llm, PromptTemplates prompts) {
         List<Product> products = new ArrayList<>();
         for (int i = 0; i < CATALOG.length; i++) {
             Product p = new Product();
@@ -124,7 +163,7 @@ class InvoiceEvaluationTest {
         SupplierRepository supplierRepository = mock(SupplierRepository.class);
         when(productRepository.search(any(), any(), any(Boolean.class), any())).thenReturn(new PageImpl<>(products));
         when(supplierRepository.findAll()).thenReturn(suppliers);
-        return new ReceiptParseServiceImpl(productRepository, supplierRepository, llm, new PromptTemplates(),
+        return new ReceiptParseServiceImpl(productRepository, supplierRepository, llm, prompts,
                 new ModelInvoiceReader(objectMapper));
     }
 

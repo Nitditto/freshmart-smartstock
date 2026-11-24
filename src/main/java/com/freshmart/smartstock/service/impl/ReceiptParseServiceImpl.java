@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +49,12 @@ public class ReceiptParseServiceImpl implements ReceiptParseService {
     static final String REASON_BAD_QUANTITY = "Số lượng phải là số nguyên > 0";
     static final String REASON_NEGATIVE_PRICE = "Đơn giá không được âm";
     static final String REASON_DUPLICATE = "Sản phẩm đã có ở dòng trước";
+    static final String REASON_NOT_IN_INVOICE = "Dòng AI trả về không có trong hóa đơn";
+    static final String REASON_NAME_MISMATCH = "Tên sản phẩm không xuất hiện trong dòng hóa đơn";
+    static final String REASON_QUANTITY_NOT_IN_LINE = "Số lượng không khớp với dòng hóa đơn";
+    static final String REASON_UNIT_MISMATCH = "Đơn vị trong hóa đơn khác đơn vị của sản phẩm";
+    static final String REASON_PRICE_NOT_IN_LINE = "Đơn giá không khớp với dòng hóa đơn";
+    private static final Pattern THOUSANDS_SEPARATOR = Pattern.compile("(?<=\\d)[.,](?=\\d{3}(?!\\d))");
 
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
@@ -60,12 +68,13 @@ public class ReceiptParseServiceImpl implements ReceiptParseService {
         Map<Long, Product> catalog = productRepository.search(null, null, true, Pageable.unpaged(Sort.by("id")))
                 .stream().collect(Collectors.toMap(Product::getId, Function.identity()));
         ModelInvoice invoice = modelInvoiceReader.read(askModel(catalog.values(), request.text()));
+        String foldedInvoice = VietnameseText.fold(request.text());
 
         List<ParsedReceiptLine> lines = new ArrayList<>();
         List<UnmatchedLine> unmatched = new ArrayList<>();
         Set<Long> seen = new HashSet<>();
         for (ModelInvoice.Item item : invoice.itemsOrEmpty()) {
-            Optional<String> rejection = rejectionReason(item, catalog, seen);
+            Optional<String> rejection = rejectionReason(item, catalog, foldedInvoice, seen);
             if (rejection.isPresent()) {
                 unmatched.add(new UnmatchedLine(item.sourceText(), rejection.get()));
             } else {
@@ -86,11 +95,11 @@ public class ReceiptParseServiceImpl implements ReceiptParseService {
         // Only id/sku/name/unit: prices and user data never leave the system (AGENTS.md section 6).
         catalog.forEach(p -> catalogText.append("%d | %s | %s | %s%n"
                 .formatted(p.getId(), p.getSku(), p.getName(), p.getUnit())));
-        String user = prompts.render(PromptTemplates.RECEIPT_PARSE_USER, Map.of(
+        String user = prompts.render(prompts.receiptParseUserPath(), Map.of(
                 "PRODUCT_CATALOG", catalogText.toString().trim(),
                 "INVOICE_TEXT", neutralizeDelimiters(invoiceText.trim())));
         try {
-            return llmService.complete(prompts.load(PromptTemplates.RECEIPT_PARSE_SYSTEM), user);
+            return llmService.complete(prompts.load(prompts.receiptParseSystemPath()), user);
         } catch (LlmUnavailableException e) {
             log.warn("LLM unavailable: {}", e.getMessage());
             throw ApiException.serviceUnavailable("Dịch vụ AI tạm thời không khả dụng, vui lòng nhập tay");
@@ -103,11 +112,12 @@ public class ReceiptParseServiceImpl implements ReceiptParseService {
     }
 
     private static Optional<String> rejectionReason(ModelInvoice.Item item, Map<Long, Product> catalog,
-                                                    Set<Long> seen) {
+                                                    String foldedInvoice, Set<Long> seen) {
         if (item.productId() == null) {
             return Optional.of(REASON_NOT_MATCHED);
         }
-        if (!catalog.containsKey(item.productId())) {
+        Product product = catalog.get(item.productId());
+        if (product == null) {
             return Optional.of(REASON_UNKNOWN_PRODUCT);
         }
         if (!isPositiveInteger(item.quantity())) {
@@ -116,7 +126,59 @@ public class ReceiptParseServiceImpl implements ReceiptParseService {
         if (item.unitPrice() != null && item.unitPrice().signum() < 0) {
             return Optional.of(REASON_NEGATIVE_PRICE);
         }
+        Optional<String> mismatch = mismatchWithInvoiceLine(item, product, foldedInvoice);
+        if (mismatch.isPresent()) {
+            return mismatch;
+        }
         return seen.add(item.productId()) ? Optional.empty() : Optional.of(REASON_DUPLICATE);
+    }
+
+    /**
+     * A real but WRONG answer (product "Gạo" for a "Sữa tươi" line, 26 for "26.000", 12 for "12.5kg") passes the
+     * catalog checks, so every value must be found in the very invoice line the model quotes. Trade-off: a synonym
+     * that is not the catalog name ends up in unmatched and is typed by hand.
+     */
+    private static Optional<String> mismatchWithInvoiceLine(ModelInvoice.Item item, Product product,
+                                                            String foldedInvoice) {
+        String line = VietnameseText.fold(item.sourceText());
+        if (line.isEmpty() || !foldedInvoice.contains(line)) {
+            return Optional.of(REASON_NOT_IN_INVOICE);
+        }
+        if (!line.contains(VietnameseText.fold(product.getName()))
+                && !line.contains(VietnameseText.fold(product.getSku()))) {
+            return Optional.of(REASON_NAME_MISMATCH);
+        }
+        Optional<String> quantityProblem = quantityProblem(line, item.quantity().toBigInteger().toString(),
+                VietnameseText.fold(product.getUnit()));
+        if (quantityProblem.isPresent()) {
+            return quantityProblem;
+        }
+        return item.unitPrice() == null || containsNumber(withoutThousandsSeparators(line), item.unitPrice())
+                ? Optional.empty() : Optional.of(REASON_PRICE_NOT_IN_LINE);
+    }
+
+    /** The quantity must be written as a whole number ("12" is not in "12.5kg"), followed by no unit or ours. */
+    private static Optional<String> quantityProblem(String line, String quantity, String catalogUnit) {
+        Matcher written = Pattern.compile("(?<![\\d.,])" + quantity + "(?![.,]?\\d)\\s*(\\p{L}+)?").matcher(line);
+        boolean found = false;
+        while (written.find()) {
+            found = true;
+            String unit = written.group(1);
+            if (unit == null || unit.equals("x") || unit.equals(catalogUnit)) {
+                return Optional.empty();
+            }
+        }
+        return Optional.of(found ? REASON_UNIT_MISMATCH : REASON_QUANTITY_NOT_IN_LINE);
+    }
+
+    /** Vietnamese prices use "." or "," as thousands separators: "1.250.000" -> "1250000"; "12.5" stays. */
+    private static String withoutThousandsSeparators(String line) {
+        return THOUSANDS_SEPARATOR.matcher(line).replaceAll("");
+    }
+
+    private static boolean containsNumber(String line, BigDecimal number) {
+        String plain = Pattern.quote(number.stripTrailingZeros().toPlainString());
+        return Pattern.compile("(?<![\\d.,])" + plain + "(?![.,]?\\d)").matcher(line).find();
     }
 
     private static boolean isPositiveInteger(BigDecimal quantity) {

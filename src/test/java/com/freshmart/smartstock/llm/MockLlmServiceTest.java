@@ -58,8 +58,8 @@ class MockLlmServiceTest {
     }
 
     private JsonNode ask(String invoice) throws Exception {
-        String user = prompts.render(PromptTemplates.RECEIPT_PARSE_USER,
+        String user = prompts.render(prompts.receiptParseUserPath(),
                 Map.of("PRODUCT_CATALOG", CATALOG, "INVOICE_TEXT", invoice));
-        return objectMapper.readTree(mock.complete(prompts.load(PromptTemplates.RECEIPT_PARSE_SYSTEM), user));
+        return objectMapper.readTree(mock.complete(prompts.load(prompts.receiptParseSystemPath()), user));
     }
 }
