@@ -77,15 +77,15 @@ Cột **Owner**: A/B/C/D/E theo `docs/plans/member-*.md`. Trạng thái trong sk
 | PATCH `/api/receipts/{id}/confirm` | Xác nhận → tăng tồn | owner/ADMIN | 200, 401, 403, 404, 409 | D | ✅ |
 | PATCH `/api/receipts/{id}/cancel` | Hủy phiếu DRAFT | owner/ADMIN | 200, 401, 403, 404, 409 | D | ✅ |
 | POST `/api/receipts/parse` | LLM: gợi ý phiếu từ hóa đơn text; dòng không hợp lệ vào `unmatched` | any | 200, 400, 401, 503 | E | ✅ |
-| POST `/api/issues` | Tạo phiếu xuất (DRAFT) | any | 201, 400, 401, 404 | C | 🧩 |
-| GET `/api/issues` | Danh sách phiếu xuất | any | 200, 401 | C | 🧩 |
-| GET `/api/issues/{id}` | Chi tiết phiếu xuất | any | 200, 401, 404 | C | 🧩 |
-| PUT `/api/issues/{id}` | Sửa phiếu DRAFT | owner/ADMIN | 200, 400, 401, 403, 404, 409 | C | 🧩 |
-| PATCH `/api/issues/{id}/confirm` | Xác nhận → giảm tồn | owner/ADMIN (DAMAGED: ADMIN) | 200, 401, 403, 404, 409 | C | 🧩 |
-| PATCH `/api/issues/{id}/cancel` | Hủy phiếu DRAFT | owner/ADMIN | 200, 401, 403, 404, 409 | C | 🧩 |
+| POST `/api/issues` | Tạo phiếu xuất (DRAFT) | any | 201, 400, 401, 404 | C | ✅ |
+| GET `/api/issues` | Danh sách phiếu xuất (lọc `status`, `from`/`to`; sort whitelist) | any | 200, 400, 401 | C | ✅ |
+| GET `/api/issues/{id}` | Chi tiết phiếu xuất | any | 200, 401, 404 | C | ✅ |
+| PUT `/api/issues/{id}` | Sửa phiếu DRAFT | owner/ADMIN | 200, 400, 401, 403, 404, 409 | C | ✅ |
+| PATCH `/api/issues/{id}/confirm` | Xác nhận → giảm tồn | owner/ADMIN (DAMAGED: ADMIN) | 200, 401, 403, 404, 409 | C | ✅ |
+| PATCH `/api/issues/{id}/cancel` | Hủy phiếu DRAFT | owner/ADMIN | 200, 401, 403, 404, 409 | C | ✅ |
 | GET `/api/inventory/low-stock` | Sản phẩm tồn ≤ MinStock | any | 200, 401 | B | 🧩 |
 | GET `/api/products/{id}/history` | Lịch sử nhập/xuất | any | 200, 401, 404 | B | 🧩 |
-| GET `/api/reports/stock-summary?from=&to=` | Báo cáo biến động tồn | ADMIN | 200, 400, 401, 403 | E | 🧩 |
+| GET `/api/reports/stock-summary?from=&to=` | Báo cáo biến động tồn: mọi sản phẩm (kể cả đã ẩn), tính theo `confirmedAt`, `to` trọn ngày | ADMIN | 200, 400, 401, 403 | E | ✅ |
 
 ## 4. Payload mẫu quan trọng
 
@@ -141,7 +141,7 @@ Cột **Owner**: A/B/C/D/E theo `docs/plans/member-*.md`. Trạng thái trong sk
 6. Low-stock: `QuantityInStock ≤ MinStock`, chỉ sản phẩm đang hoạt động.
 7. Sai email / sai mật khẩu / tài khoản khóa → cùng một thông báo 401.
 8. Thời điểm biến động tồn trong **lịch sử** và **báo cáo** = `confirmed_at` của chứng từ (không phải `created_at`); chỉ tính chứng từ CONFIRMED.
-9. "Sản phẩm vừa giảm xuống dưới mức tối thiểu" (kết quả xác nhận phiếu xuất) = các sản phẩm trong phiếu có tồn sau xuất ≤ MinStock. *(Đề xuất – nhóm xác nhận ở kickoff.)*
+9. **[Đã chốt]** "Sản phẩm vừa giảm xuống dưới mức tối thiểu" (`newlyLowStock` khi xác nhận phiếu xuất) = các sản phẩm **trong phiếu** có tồn sau xuất ≤ MinStock (tồn đúng bằng MinStock cũng tính).
 10. **[Đã chốt 20/11 – không cần họp lại]** Sản phẩm **ẩn**: `GET /api/products/{id}` vẫn trả 200 với `active=false` (để lịch sử còn đọc được); không hiện trong danh sách `GET /api/products`, không hiện trong low-stock.
 11. **[Đã chốt]** Thêm sản phẩm vào chứng từ: id **không tồn tại → 404**; sản phẩm **đã ẩn → 400**; NCC không tồn tại → 404; dòng lặp sản phẩm → 400. (Cài trong `DocumentGuard`.)
 12. **[Đã chốt]** Phiếu xuất `DAMAGED`: ai cũng **tạo** được (DRAFT); chỉ ADMIN **xác nhận** (STAFF → 403, kể cả chủ phiếu). Thứ tự kiểm tra khi confirm: tồn tại(404) → quyền sở hữu(403) → DAMAGED(403) → trạng thái(409) → tồn kho(409).

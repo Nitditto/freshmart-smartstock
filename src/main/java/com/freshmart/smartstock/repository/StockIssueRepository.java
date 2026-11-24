@@ -23,7 +23,11 @@ public interface StockIssueRepository extends JpaRepository<StockIssue, Long> {
     @Query("select i from StockIssue i where i.id = :id")
     Optional<StockIssue> findByIdForUpdate(@Param("id") Long id);
 
-    /** from inclusive, to exclusive (pass start of next day). Any filter may be null. */
+    /**
+     * from inclusive, to exclusive (pass start of next day). Any filter may be null. The creator is fetched in the
+     * same query because every list row shows it; lines stay lazy (a collection fetch would break SQL paging).
+     */
+    @EntityGraph(attributePaths = {"createdBy"})
     @Query("""
             select i from StockIssue i
             where (:status is null or i.status = :status)

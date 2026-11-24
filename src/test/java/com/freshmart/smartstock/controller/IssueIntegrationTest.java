@@ -1,8 +1,9 @@
 package com.freshmart.smartstock.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,17 +23,22 @@ import com.freshmart.smartstock.security.AuthUser;
 import com.freshmart.smartstock.security.JwtService;
 import com.freshmart.smartstock.support.AbstractIntegrationTest;
 import com.freshmart.smartstock.support.TestData;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.http.MediaType;
 
 class IssueIntegrationTest extends AbstractIntegrationTest {
+
+    private static final int CONCURRENCY_TIMEOUT_SECONDS = 30;
 
     @Autowired
     private UserRepository userRepository;
@@ -125,62 +131,100 @@ class IssueIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void concurrentConfirmNeverOversells() throws Exception {
+    void concurrentConfirmOfTwoIssuesNeverOversells() throws Exception {
         User staff = testData.user(Role.STAFF);
-        Product product = testData.product(10, 2); // Initial stock = 10
-        StockIssue issue1 = testData.issue(staff, product, 8, IssueReason.SALE, DocumentStatus.DRAFT, null);
-        StockIssue issue2 = testData.issue(staff, product, 8, IssueReason.SALE, DocumentStatus.DRAFT, null);
+        Product product = testData.product(10, 2);
+        StockIssue first = testData.issue(staff, product, 8, IssueReason.SALE, DocumentStatus.DRAFT, null);
+        StockIssue second = testData.issue(staff, product, 8, IssueReason.SALE, DocumentStatus.DRAFT, null);
 
-        ExecutorService pool = Executors.newFixedThreadPool(2);
-        CountDownLatch ready = new CountDownLatch(2);
-        CountDownLatch go = new CountDownLatch(1);
+        List<Integer> statuses = confirmConcurrently(bearer(staff), first.getId(), second.getId());
 
-        AtomicInteger successCount = new AtomicInteger();
-        AtomicInteger conflictCount = new AtomicInteger();
+        assertEquals(List.of(200, 409), statuses.stream().sorted().toList());
+        assertEquals(2, productRepository.findById(product.getId()).orElseThrow().getQuantityInStock());
+    }
 
+    @Test
+    void concurrentConfirmOfTheSameIssueDeductsOnce() throws Exception {
+        User staff = testData.user(Role.STAFF);
+        Product product = testData.product(10, 2);
+        StockIssue issue = testData.issue(staff, product, 3, IssueReason.SALE, DocumentStatus.DRAFT, null);
+
+        List<Integer> statuses = confirmConcurrently(bearer(staff), issue.getId(), issue.getId());
+
+        assertEquals(List.of(200, 409), statuses.stream().sorted().toList());
+        assertEquals(7, productRepository.findById(product.getId()).orElseThrow().getQuantityInStock());
+    }
+
+    @Test
+    void updateKeepingTheSameProductDoesNotBreakTheUniqueLineConstraint() throws Exception {
+        User staff = testData.user(Role.STAFF);
+        Product product = testData.product(10, 2);
+        StockIssue issue = testData.issue(staff, product, 3, IssueReason.SALE, DocumentStatus.DRAFT, null);
+
+        mockMvc.perform(put("/api/issues/{id}", issue.getId()).header(HttpHeaders.AUTHORIZATION, bearer(staff))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"INTERNAL\",\"lines\":[{\"productId\":%d,\"quantity\":5}]}"
+                                .formatted(product.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reason").value("INTERNAL"))
+                .andExpect(jsonPath("$.data.lines.length()").value(1))
+                .andExpect(jsonPath("$.data.lines[0].quantity").value(5));
+    }
+
+    @Test
+    void cancelTwiceIs409AndCancelledIssueCannotBeConfirmed() throws Exception {
+        User staff = testData.user(Role.STAFF);
+        Product product = testData.product(10, 2);
+        StockIssue issue = testData.issue(staff, product, 3, IssueReason.SALE, DocumentStatus.DRAFT, null);
         String token = bearer(staff);
 
-        Runnable task1 = () -> {
-            try {
-                ready.countDown();
-                go.await();
-                MvcResult result = mockMvc.perform(patch("/api/issues/{id}/confirm", issue1.getId())
-                                .header(HttpHeaders.AUTHORIZATION, token))
-                        .andReturn();
-                int httpStatus = result.getResponse().getStatus();
-                if (httpStatus == 200) successCount.incrementAndGet();
-                else if (httpStatus == 409) conflictCount.incrementAndGet();
-            } catch (Exception ignored) {
+        mockMvc.perform(patch("/api/issues/{id}/cancel", issue.getId()).header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("CANCELLED"));
+        mockMvc.perform(patch("/api/issues/{id}/cancel", issue.getId()).header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/api/issues/{id}/confirm", issue.getId()).header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isConflict());
+        assertEquals(10, productRepository.findById(product.getId()).orElseThrow().getQuantityInStock());
+    }
+
+    @Test
+    void listFiltersByStatusAndRejectsUnknownSort() throws Exception {
+        User staff = testData.user(Role.STAFF);
+        Product product = testData.product(10, 2);
+        StockIssue cancelled = testData.issue(staff, product, 1, IssueReason.SALE, DocumentStatus.CANCELLED, null);
+        String token = bearer(staff);
+
+        mockMvc.perform(get("/api/issues").param("status", "CANCELLED").param("sort", "id,desc")
+                        .header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].id").value(cancelled.getId()))
+                .andExpect(jsonPath("$.data.items[0].createdByName").value(staff.getFullName()));
+        mockMvc.perform(get("/api/issues").param("sort", "passwordHash").header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isBadRequest());
+    }
+
+    /** Starts both confirms at the same instant and waits for both answers (no sleep, no swallowed errors). */
+    private List<Integer> confirmConcurrently(String token, Long firstId, Long secondId) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        CountDownLatch go = new CountDownLatch(1);
+        try {
+            List<Future<Integer>> results = new ArrayList<>();
+            for (Long id : List.of(firstId, secondId)) {
+                results.add(pool.submit(() -> {
+                    go.await();
+                    return mockMvc.perform(patch("/api/issues/{id}/confirm", id)
+                            .header(HttpHeaders.AUTHORIZATION, token)).andReturn().getResponse().getStatus();
+                }));
             }
-        };
-
-        Runnable task2 = () -> {
-            try {
-                ready.countDown();
-                go.await();
-                MvcResult result = mockMvc.perform(patch("/api/issues/{id}/confirm", issue2.getId())
-                                .header(HttpHeaders.AUTHORIZATION, token))
-                        .andReturn();
-                int httpStatus = result.getResponse().getStatus();
-                if (httpStatus == 200) successCount.incrementAndGet();
-                else if (httpStatus == 409) conflictCount.incrementAndGet();
-            } catch (Exception ignored) {
+            go.countDown();
+            List<Integer> statuses = new ArrayList<>();
+            for (Future<Integer> result : results) {
+                statuses.add(result.get(CONCURRENCY_TIMEOUT_SECONDS, TimeUnit.SECONDS));
             }
-        };
-
-        pool.submit(task1);
-        pool.submit(task2);
-
-        ready.await();
-        go.countDown();
-        pool.shutdown();
-
-        // Exactly one should succeed (200), and one should fail (409)
-        assertEquals(1, successCount.get());
-        assertEquals(1, conflictCount.get());
-
-        // Final stock must be 10 - 8 = 2, NEVER negative
-        Product updated = productRepository.findById(product.getId()).orElseThrow();
-        assertEquals(2, updated.getQuantityInStock());
+            return statuses;
+        } finally {
+            pool.shutdownNow();
+        }
     }
 }
