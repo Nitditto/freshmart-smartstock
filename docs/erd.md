@@ -4,6 +4,8 @@
 
 ![ERD](erd.png)
 
+Nguồn dbdiagram: `docs/erd.dbml` (DBML). Mở https://dbdiagram.io, dán nội dung file vào khung soạn thảo để xem hoặc chỉnh sơ đồ; khi đổi schema thì sửa migration trước, rồi cập nhật file này.
+
 ```mermaid
 erDiagram
     USERS ||--o{ STOCK_RECEIPTS : "created_by"
