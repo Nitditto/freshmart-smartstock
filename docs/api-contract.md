@@ -76,7 +76,7 @@ Cột **Owner**: A/B/C/D/E theo `docs/plans/member-*.md`. Trạng thái trong sk
 | PUT `/api/receipts/{id}` | Sửa phiếu DRAFT | owner/ADMIN | 200, 400, 401, 403, 404, 409 | D | ✅ |
 | PATCH `/api/receipts/{id}/confirm` | Xác nhận → tăng tồn | owner/ADMIN | 200, 401, 403, 404, 409 | D | ✅ |
 | PATCH `/api/receipts/{id}/cancel` | Hủy phiếu DRAFT | owner/ADMIN | 200, 401, 403, 404, 409 | D | ✅ |
-| POST `/api/receipts/parse` | LLM: gợi ý phiếu từ hóa đơn text | any | 200, 400, 401, 503 | E | 🧩 |
+| POST `/api/receipts/parse` | LLM: gợi ý phiếu từ hóa đơn text; dòng không hợp lệ vào `unmatched` | any | 200, 400, 401, 503 | E | ✅ |
 | POST `/api/issues` | Tạo phiếu xuất (DRAFT) | any | 201, 400, 401, 404 | C | 🧩 |
 | GET `/api/issues` | Danh sách phiếu xuất | any | 200, 401 | C | 🧩 |
 | GET `/api/issues/{id}` | Chi tiết phiếu xuất | any | 200, 401, 404 | C | 🧩 |
