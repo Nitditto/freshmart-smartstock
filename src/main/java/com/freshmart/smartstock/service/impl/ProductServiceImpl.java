@@ -1,6 +1,7 @@
 package com.freshmart.smartstock.service.impl;
 
 import com.freshmart.smartstock.common.api.PageResponse;
+import com.freshmart.smartstock.common.api.PageableGuard;
 import com.freshmart.smartstock.common.exception.ApiException;
 import com.freshmart.smartstock.domain.entity.Category;
 import com.freshmart.smartstock.domain.entity.Product;
@@ -9,6 +10,7 @@ import com.freshmart.smartstock.dto.product.ProductResponse;
 import com.freshmart.smartstock.repository.CategoryRepository;
 import com.freshmart.smartstock.repository.ProductRepository;
 import com.freshmart.smartstock.service.ProductService;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,12 +20,17 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
+    private static final Set<String> SORTABLE = Set.of("id", "sku", "name", "price", "quantityInStock");
+
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<ProductResponse> search(String keyword, Long categoryId, Pageable pageable) {
-        throw ApiException.notImplemented("Member B");
+        Pageable safe = PageableGuard.sanitize(pageable, SORTABLE);
+        String kw = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        return PageResponse.from(productRepository.search(kw, categoryId, true, safe), ProductResponse::from);
     }
 
     @Override
