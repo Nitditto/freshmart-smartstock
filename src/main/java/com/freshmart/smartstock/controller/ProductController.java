@@ -6,6 +6,7 @@ import com.freshmart.smartstock.dto.product.ProductRequest;
 import com.freshmart.smartstock.dto.product.ProductResponse;
 import com.freshmart.smartstock.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,9 @@ public class ProductController {
     @GetMapping
     @Operation(summary = "Search products (pagination, sorting, keyword on name/SKU, categoryId filter)")
     public ApiResponse<PageResponse<ProductResponse>> search(
+            @Parameter(description = "Từ khóa tìm kiếm theo tên hoặc mã SKU")
             @RequestParam(required = false) String keyword,
+            @Parameter(description = "ID danh mục để lọc sản phẩm")
             @RequestParam(required = false) Long categoryId,
             @ParameterObject @PageableDefault(size = 20, sort = "id") Pageable pageable) {
         return ApiResponse.ok(productService.search(keyword, categoryId, pageable));
@@ -44,7 +47,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get one product with its current stock")
-    public ApiResponse<ProductResponse> get(@PathVariable Long id) {
+    public ApiResponse<ProductResponse> get(@Parameter(description = "ID của sản phẩm") @PathVariable Long id) {
         return ApiResponse.ok(productService.get(id));
     }
 
