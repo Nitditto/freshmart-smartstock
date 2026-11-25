@@ -459,7 +459,10 @@ class CatalogIntegrationTest extends AbstractIntegrationTest {
                     .andExpect(status().isOk())
                     .andReturn().getResponse().getContentAsString();
 
-            List<Long> lowStockIds = JsonPath.read(response, "$.data[*].productId");
+            List<?> rawIds = JsonPath.read(response, "$.data[*].productId");
+            List<Long> lowStockIds = rawIds.stream()
+                    .map(id -> ((Number) id).longValue())
+                    .toList();
 
             assertTrue(lowStockIds.contains(pEqual.getId()));
             assertTrue(lowStockIds.contains(pZero.getId()));
@@ -482,16 +485,16 @@ class CatalogIntegrationTest extends AbstractIntegrationTest {
 
             // Receipt 1: CONFIRMED at t1 (qty = 50)
             data.receipt(admin, p, 50, DocumentStatus.CONFIRMED, t1);
-            
+
             // Receipt 2: DRAFT (unconfirmed) -> ignored
             data.receipt(admin, p, 999, DocumentStatus.DRAFT, null);
-            
+
             // Issue 1: CANCELLED -> ignored
             data.issue(staff, p, 888, IssueReason.SALE, DocumentStatus.CANCELLED, null);
-            
+
             // Issue 2: CONFIRMED at t2 (qty = 20)
             data.issue(staff, p, 20, IssueReason.SALE, DocumentStatus.CONFIRMED, t2);
-            
+
             // Receipt 3: CONFIRMED at t3 (qty = 30)
             data.receipt(admin, p, 30, DocumentStatus.CONFIRMED, t3);
 
