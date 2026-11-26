@@ -13,6 +13,7 @@ import com.freshmart.smartstock.domain.entity.User;
 import com.freshmart.smartstock.domain.enums.DocumentStatus;
 import com.freshmart.smartstock.domain.enums.IssueReason;
 import com.freshmart.smartstock.domain.enums.Role;
+import com.freshmart.smartstock.dto.report.ExportFormat;
 import com.freshmart.smartstock.repository.CategoryRepository;
 import com.freshmart.smartstock.repository.ProductRepository;
 import com.freshmart.smartstock.repository.StockIssueRepository;
@@ -131,6 +132,30 @@ class StockSummaryIntegrationTest extends AbstractIntegrationTest {
         assertTrue(text.startsWith("Mã SP,SKU,Tên sản phẩm,Tồn đầu,Nhập,Xuất,Tồn cuối\r\n"));
         assertTrue(text.contains("%d,%s,%s,0,12,0,12\r\n".formatted(product.getId(), product.getSku(),
                 product.getName())));
+    }
+
+    @Test
+    void adminDownloadsExcelFileWhenAskedForXlsx() throws Exception {
+        data.receipt(admin, data.product(0, 0), 12, DocumentStatus.CONFIRMED, PERIOD_START.plusSeconds(60));
+
+        byte[] xlsx = mockMvc.perform(get("/api/reports/stock-summary/export" + PERIOD + "&format=XLSX")
+                        .header(HttpHeaders.AUTHORIZATION, token(admin)))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, ExportFormat.XLSX.contentType()))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"stock-summary_2026-11-20_2026-11-22.xlsx\""))
+                .andReturn().getResponse().getContentAsByteArray();
+
+        assertEquals('P', (char) xlsx[0]);
+        assertEquals('K', (char) xlsx[1]);
+    }
+
+    @Test
+    void exportRejectsAnUnknownFormatAsJson() throws Exception {
+        mockMvc.perform(get("/api/reports/stock-summary/export" + PERIOD + "&format=pdf")
+                        .header(HttpHeaders.AUTHORIZATION, token(admin)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test

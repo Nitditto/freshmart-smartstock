@@ -56,7 +56,7 @@ Bộ khung phải có sẵn:
 | Phiếu nhập | `/receipts`, `/receipts/{id}`, `confirm`, `cancel` | danh sách lọc trạng thái/ngày; form nhiều dòng (chọn sản phẩm, SL, giá); chặn dòng trùng ở client; nút Xác nhận/Hủy chỉ hiện khi `DRAFT` và đúng chủ phiếu/ADMIN | mọi người | |
 | **Nhập từ hóa đơn (AI)** | `POST /receipts/parse` | dán text -> hiển thị **gợi ý** + danh sách `unmatched` -> người dùng sửa -> bấm "Tạo phiếu nháp"; nhãn "AI gợi ý - cần kiểm tra"; xử lý 503 ("nhập tay") và cờ `mock` | mọi người | |
 | Phiếu xuất | `/issues`, ..., `confirm`, `cancel` | như phiếu nhập + chọn lý do; **409 thiếu tồn -> dialog liệt kê `ShortageItem`**; sau confirm thành công hiển thị `newlyLowStock` bằng cảnh báo; `DAMAGED` ẩn nút Xác nhận với STAFF | mọi người | |
-| Báo cáo tồn | `GET /reports/stock-summary` | chọn khoảng ngày, bảng opening/in/out/closing, (nếu có) nút xuất CSV | ADMIN | |
+| Báo cáo tồn | `GET /reports/stock-summary` | chọn khoảng ngày, bảng opening/in/out/closing, nút Xuất CSV và Xuất Excel | ADMIN | |
 | Tài khoản | `GET/POST /users`, `PATCH /users/{id}/status` | bảng, tạo user, khóa/mở khóa; không cho tự khóa mình | ADMIN | |
 
 > Màn hình chưa có người nhận: ai rảnh ghi tên. Nếu hết 26/11 vẫn trống, nhóm chia lại trong buổi họp - **không cắt**.

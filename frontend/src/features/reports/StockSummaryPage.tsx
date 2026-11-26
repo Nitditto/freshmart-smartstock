@@ -12,6 +12,8 @@ import { EmptyState, ErrorState, Loading } from '../../shared/ui/States'
 import { toast } from '../../shared/ui/toast'
 import { TABLE, TD, TD_NUM, TH, TH_NUM, TD_CODE } from '../../shared/ui/table'
 
+type ExportFormat = 'csv' | 'xlsx'
+
 function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -35,11 +37,12 @@ export function StockSummaryPage() {
     enabled: rangeValid,
   })
 
-  const exportCsv = useMutation({
-    mutationFn: () => apiDownload('/reports/stock-summary/export', { from, to }),
-    onSuccess: (blob) => {
-      saveBlob(blob, `stock-summary_${from}_${to}.csv`)
-      toast.success('Đã tải file CSV (mở được bằng Excel)')
+  const exportFile = useMutation({
+    mutationFn: (format: ExportFormat) =>
+      apiDownload('/reports/stock-summary/export', { from, to, format }).then((blob) => ({ blob, format })),
+    onSuccess: ({ blob, format }) => {
+      saveBlob(blob, `stock-summary_${from}_${to}.${format}`)
+      toast.success(format === 'xlsx' ? 'Đã tải file Excel' : 'Đã tải file CSV')
     },
   })
 
@@ -51,15 +54,20 @@ export function StockSummaryPage() {
         title="Báo cáo biến động tồn kho"
         description="Tồn đầu kỳ + nhập - xuất = tồn cuối kỳ, chỉ tính chứng từ đã xác nhận (theo ngày xác nhận)."
         actions={
-          <Button
-            variant="secondary"
-            icon={<Download className="size-4" aria-hidden="true" />}
-            loading={exportCsv.isPending}
-            disabled={!rangeValid}
-            onClick={() => exportCsv.mutate()}
-          >
-            Xuất CSV
-          </Button>
+          <div className="flex gap-2">
+            {(['csv', 'xlsx'] as const).map((format) => (
+              <Button
+                key={format}
+                variant="secondary"
+                icon={<Download className="size-4" aria-hidden="true" />}
+                loading={exportFile.isPending && exportFile.variables === format}
+                disabled={!rangeValid || exportFile.isPending}
+                onClick={() => exportFile.mutate(format)}
+              >
+                {format === 'xlsx' ? 'Xuất Excel' : 'Xuất CSV'}
+              </Button>
+            ))}
+          </div>
         }
       />
 

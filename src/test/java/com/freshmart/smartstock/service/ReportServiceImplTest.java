@@ -9,7 +9,8 @@ import static org.mockito.Mockito.when;
 import com.freshmart.smartstock.common.exception.ApiException;
 import com.freshmart.smartstock.domain.entity.Product;
 import com.freshmart.smartstock.dto.inventory.StockSummaryItem;
-import com.freshmart.smartstock.dto.report.CsvFile;
+import com.freshmart.smartstock.dto.report.ExportFormat;
+import com.freshmart.smartstock.dto.report.ReportFile;
 import com.freshmart.smartstock.repository.ReportRepository;
 import com.freshmart.smartstock.repository.ReportRepository.ProductMovement;
 import com.freshmart.smartstock.service.impl.ReportServiceImpl;
@@ -96,16 +97,32 @@ class ReportServiceImplTest {
         when(reportRepository.sumConfirmedIssues(START, END)).thenReturn(List.of(movement(1L, 30, 5)));
         when(reportRepository.findAllProductsOrderById()).thenReturn(List.of(product(1L, "RCQ-001")));
 
-        CsvFile file = service.exportStockSummaryCsv(FROM, TO);
+        ReportFile file = service.exportStockSummary(FROM, TO, ExportFormat.CSV);
 
         assertEquals("stock-summary_2026-11-20_2026-11-22.csv", file.fileName());
+        assertEquals("text/csv;charset=UTF-8", file.contentType());
         String csv = new String(file.content(), StandardCharsets.UTF_8);
         assertTrue(csv.endsWith("1,RCQ-001,Product RCQ-001,70,20,5,85\r\n"));
     }
 
     @Test
+    void exportAsExcelWritesAnXlsxPackageNamedAfterThePeriod() {
+        when(reportRepository.sumConfirmedReceipts(START, END)).thenReturn(List.of(movement(1L, 100, 20)));
+        when(reportRepository.sumConfirmedIssues(START, END)).thenReturn(List.of(movement(1L, 30, 5)));
+        when(reportRepository.findAllProductsOrderById()).thenReturn(List.of(product(1L, "RCQ-001")));
+
+        ReportFile file = service.exportStockSummary(FROM, TO, ExportFormat.XLSX);
+
+        assertEquals("stock-summary_2026-11-20_2026-11-22.xlsx", file.fileName());
+        assertEquals(ExportFormat.XLSX.contentType(), file.contentType());
+        assertEquals('P', (char) file.content()[0]);
+        assertEquals('K', (char) file.content()[1]);
+    }
+
+    @Test
     void exportRejectsFromAfterToWith400() {
-        ApiException ex = assertThrows(ApiException.class, () -> service.exportStockSummaryCsv(TO, FROM));
+        ApiException ex = assertThrows(ApiException.class,
+                () -> service.exportStockSummary(TO, FROM, ExportFormat.CSV));
 
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
         verifyNoInteractions(reportRepository);

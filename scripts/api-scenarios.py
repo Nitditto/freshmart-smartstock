@@ -749,6 +749,20 @@ def _():
     check(st == 400 and body["status"] == 400, "error stays JSON")
 
 
+@case("REP-05", "Excel export: format=xlsx (any case) -> 200, xlsx content type, .xlsx filename, zip signature; unknown format -> 400 JSON; STAFF 403")
+def _():
+    today = hcm_today()
+    period = f"from={today.replace(day=1)}&to={today}"
+    st, raw, hdr = call("GET", f"/api/reports/stock-summary/export?{period}&format=xlsx", admin, raw=True)
+    check(st == 200 and "spreadsheetml.sheet" in hdr["Content-Type"], hdr)
+    check(f"stock-summary_{today.replace(day=1)}_{today}.xlsx" in hdr["Content-Disposition"], hdr["Content-Disposition"])
+    check(raw[:2] == b"PK", "zip signature")
+    check(call("GET", f"/api/reports/stock-summary/export?{period}&format=XLSX", admin, raw=True)[0] == 200, "upper case")
+    st, body, _ = call("GET", f"/api/reports/stock-summary/export?{period}&format=pdf", admin)
+    check(st == 400 and body["status"] == 400, "unknown format stays JSON")
+    check(call("GET", f"/api/reports/stock-summary/export?{period}&format=xlsx", s1)[0] == 403, "STAFF")
+
+
 # ---------------------------------------------------------------- US-11 LLM
 INVOICE = "NCC Nông sản Xanh - Cà chua 40kg x 26.000; Khoai tây 60kg x 20.000; Bánh mì sandwich 20 gói x 25.000"
 

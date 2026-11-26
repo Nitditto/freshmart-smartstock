@@ -8,7 +8,7 @@ Backend quản lý kho cho FreshMart: mọi thay đổi tồn kho đi qua **phi�
 - Đăng nhập/JWT, phân quyền, đổi mật khẩu, quản lý tài khoản.
 - Danh mục, sản phẩm (tìm kiếm, phân trang, ẩn), nhà cung cấp, cảnh báo tồn thấp, lịch sử nhập/xuất của sản phẩm.
 - Phiếu nhập và phiếu xuất (tạo/sửa/xác nhận/hủy; khóa dòng khi xác nhận nên không bán lố, thiếu tồn -> 409 + danh sách thiếu).
-- Báo cáo `stock-summary` (JSON và CSV), LLM `POST /api/receipts/parse` (mock hoặc Ollama), seed 10 chứng từ.
+- Báo cáo `stock-summary` (JSON, tải CSV hoặc Excel), LLM `POST /api/receipts/parse` (mock hoặc Ollama), seed 10 chứng từ.
 
 ## 1. Chạy nhanh bằng Docker Compose (khuyến nghị)
 
@@ -59,7 +59,7 @@ npm run dev        # http://localhost:5173, tự chuyển /api sang http://local
 npm run lint && npm run test && npm run build
 npm run gen:api    # sinh lại src/api/schema.ts từ /v3/api-docs khi backend đổi (không sửa tay file này)
 ```
-- Màn hình: đăng nhập (nút điền sẵn tài khoản mẫu), tổng quan và cảnh báo tồn thấp, sản phẩm (tìm kiếm, lọc, sắp xếp, lịch sử nhập/xuất), phiếu nhập, nhập phiếu từ hóa đơn bằng AI, phiếu xuất (hộp thoại thiếu tồn khi gặp 409, cảnh báo sản phẩm vừa chạm mức tối thiểu), báo cáo tồn kho kèm tải CSV (ADMIN).
+- Màn hình: đăng nhập (nút điền sẵn tài khoản mẫu), tổng quan và cảnh báo tồn thấp, sản phẩm (tìm kiếm, lọc, sắp xếp, lịch sử nhập/xuất), phiếu nhập, nhập phiếu từ hóa đơn bằng AI, phiếu xuất (hộp thoại thiếu tồn khi gặp 409, cảnh báo sản phẩm vừa chạm mức tối thiểu), báo cáo tồn kho kèm nút Xuất CSV và Xuất Excel (ADMIN).
 - Muốn đăng nhập nhanh khi demo: tạo `frontend/.env.local` (git bỏ qua) với `VITE_DEMO_PASSWORD=<mật khẩu mẫu ở mục dưới>`; mẫu cấu hình ở `frontend/.env.example`.
 - Ẩn menu hoặc nút theo vai trò chỉ để tiện dùng; quyền thật do backend trả 403.
 - Chưa có màn hình quản lý danh mục, nhà cung cấp, tài khoản: dùng Swagger cho các thao tác đó.
@@ -81,7 +81,7 @@ Dữ liệu seed (chạy khi DB trống, chạy lại không nhân đôi): 1 ADM
 1. `POST /api/auth/login` -> copy `data.accessToken`.
 2. Bấm **Authorize** (góc phải trên) -> dán token (không cần gõ chữ `Bearer`).
 3. Gọi các API. STAFF gọi API của ADMIN sẽ nhận **403**.
-4. Xuất báo cáo tồn ra Excel (ADMIN): `GET /api/reports/stock-summary/export?from=2026-11-01&to=2026-11-30` rồi bấm *Download file*.
+4. Xuất báo cáo tồn (ADMIN): `GET /api/reports/stock-summary/export?from=2026-11-01&to=2026-11-30&format=xlsx` rồi bấm *Download file*. `format` là `xlsx` (Excel, nên dùng) hoặc `csv` (mặc định). Excel đọc CSV theo dấu phân cách của từng máy (máy tiếng Việt thường dùng dấu chấm phẩy nên cả dòng có thể dồn vào một cột), vì vậy file `.xlsx` luôn đúng cột.
 
 ## 4. Test
 ```bash

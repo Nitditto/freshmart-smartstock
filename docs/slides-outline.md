@@ -113,7 +113,7 @@ Chuẩn bị: `docker compose down -v && docker compose up --build`, mở `http:
 | 5 | Tạo phiếu xuất 100 sản phẩm RCQ-005 (Chuối, tồn 30), confirm | **409**, `data` có `requested 100`, `available 30`, tồn không đổi | C |
 | 6 | Tạo phiếu xuất 21 sản phẩm RCQ-005, confirm | 200, `newlyLowStock` có RCQ-005 (tồn 9, MinStock 10) | C |
 | 7 | `GET /api/inventory/low-stock` và `GET /api/products/{id}/history` | RCQ-005 xuất hiện ở low-stock; lịch sử có dòng OUT | B |
-| 8 | ADMIN gọi `GET /api/reports/stock-summary` (và bản `export` tải CSV) | tồn đầu + nhập - xuất = tồn cuối | E |
+| 8 | ADMIN gọi `GET /api/reports/stock-summary` (và bản `export` tải Excel hoặc CSV) | tồn đầu + nhập - xuất = tồn cuối | E |
 
 - Số liệu tồn ở bảng trên lấy từ dữ liệu seed hiện tại; chạy thử một lần trước ngày 30/11 để xác nhận và sửa số nếu seed đổi.
 - Việc cần làm: chụp ảnh mọi bước làm bản dự phòng; tập dượt có bấm giờ để demo gói trong khoảng 1 phút.
@@ -140,7 +140,7 @@ Mỗi người 2-3 dòng: đã làm gì (kèm một con số hoặc một sản 
 | D | JWT, ma trận quyền, quản lý tài khoản, phiếu nhập, định dạng phản hồi chung, Swagger | |
 | C | Phiếu xuất, xác nhận an toàn khi đồng thời, sinh mã chứng từ không trùng, test đa luồng | |
 | B | Sản phẩm, nhà cung cấp, tìm kiếm có phân trang, cảnh báo tồn thấp, lịch sử | |
-| E | LLM parse và đo 8 hóa đơn, báo cáo tồn kho và xuất CSV, Git, tài liệu | |
+| E | LLM parse và đo 8 hóa đơn, báo cáo tồn kho và xuất Excel/CSV, Git, tài liệu | |
 
 ---
 

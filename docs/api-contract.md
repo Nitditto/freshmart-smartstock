@@ -86,7 +86,7 @@ Cột **Owner**: A/B/C/D/E theo `docs/plans/member-*.md`. Cột Trạng thái: `
 | GET `/api/inventory/low-stock` | Sản phẩm tồn <= MinStock | any | 200, 401 | B | Xong |
 | GET `/api/products/{id}/history` | Lịch sử nhập/xuất (chỉ phiếu CONFIRMED, mới nhất trước, tối đa 500 dòng; `direction` IN/OUT, `documentType` RECEIPT/ISSUE) | any | 200, 401, 404 | B | Xong |
 | GET `/api/reports/stock-summary?from=&to=` | Báo cáo biến động tồn: mọi sản phẩm (kể cả đã ẩn), tính theo `confirmedAt`, `to` trọn ngày | ADMIN | 200, 400, 401, 403 | E | Xong |
-| GET `/api/reports/stock-summary/export?from=&to=` | Tải báo cáo biến động tồn dạng CSV cho Excel (UTF-8 có BOM, chống CSV injection); lỗi vẫn trả JSON | ADMIN | 200, 400, 401, 403 | E | Xong |
+| GET `/api/reports/stock-summary/export?from=&to=&format=` | Tải báo cáo biến động tồn: `format=xlsx` (Excel) hoặc `csv` (mặc định; UTF-8 có BOM, chống CSV injection); sai `format` hoặc `from` sau `to` trả 400; lỗi vẫn trả JSON | ADMIN | 200, 400, 401, 403 | E | Xong |
 
 ## 4. Payload mẫu quan trọng
 
