@@ -1,5 +1,6 @@
 package com.freshmart.smartstock.service.impl;
 
+import com.freshmart.smartstock.common.api.LikePattern;
 import com.freshmart.smartstock.common.api.PageResponse;
 import com.freshmart.smartstock.common.api.PageableGuard;
 import com.freshmart.smartstock.common.exception.ApiException;
@@ -29,7 +30,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public PageResponse<ProductResponse> search(String keyword, Long categoryId, Pageable pageable) {
         Pageable safe = PageableGuard.sanitize(pageable, SORTABLE);
-        String kw = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        String kw = (keyword == null || keyword.isBlank()) ? null : LikePattern.escape(keyword.trim());
         return PageResponse.from(productRepository.search(kw, categoryId, true, safe), ProductResponse::from);
     }
 

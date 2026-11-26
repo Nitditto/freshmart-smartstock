@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.freshmart.smartstock.common.api.LikePattern;
 import com.freshmart.smartstock.domain.entity.DocumentCounter;
 import com.freshmart.smartstock.domain.entity.Product;
 import com.freshmart.smartstock.domain.entity.StockReceipt;
@@ -69,6 +70,23 @@ class RepositoryQueryIntegrationTest extends AbstractIntegrationTest {
                 ids(productRepository.search(tomato.getSku().toLowerCase(), null, true, PageRequest.of(0, 10))));
         assertEquals(List.of(tomato.getId(), sameCategory.getId()),
                 ids(productRepository.search(null, tomato.getCategory().getId(), true, PageRequest.of(0, 10))));
+    }
+
+    @Test
+    void searchTreatsEscapedUnderscoreAndPercentAsLiteralText() {
+        Product literal = data.product(1, 0);
+        literal.setSku("ZQ_100%-" + literal.getId());
+        productRepository.save(literal);
+        Product lookalike = data.product(1, 0);
+        lookalike.setSku("ZQX1000-" + lookalike.getId());
+        productRepository.save(lookalike);
+
+        List<Long> literalOnly = ids(productRepository.search(LikePattern.escape("ZQ_100%"), null, true,
+                PageRequest.of(0, 10)));
+        List<Long> unescaped = ids(productRepository.search("ZQ_100%", null, true, PageRequest.of(0, 10)));
+
+        assertEquals(List.of(literal.getId()), literalOnly);
+        assertEquals(List.of(literal.getId(), lookalike.getId()), unescaped);
     }
 
     @Test
