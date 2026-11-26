@@ -3,7 +3,8 @@ package com.freshmart.smartstock.service.impl;
 import com.freshmart.smartstock.common.exception.ApiException;
 import com.freshmart.smartstock.domain.entity.Product;
 import com.freshmart.smartstock.dto.inventory.StockSummaryItem;
-import com.freshmart.smartstock.dto.report.CsvFile;
+import com.freshmart.smartstock.dto.report.ExportFormat;
+import com.freshmart.smartstock.dto.report.ReportFile;
 import com.freshmart.smartstock.repository.ReportRepository;
 import com.freshmart.smartstock.repository.ReportRepository.ProductMovement;
 import com.freshmart.smartstock.service.ReportService;
@@ -46,9 +47,11 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     @Transactional(readOnly = true)
-    public CsvFile exportStockSummaryCsv(LocalDate from, LocalDate to) {
-        byte[] content = StockSummaryCsv.write(stockSummary(from, to));
-        return new CsvFile("stock-summary_%s_%s.csv".formatted(from, to), content);
+    public ReportFile exportStockSummary(LocalDate from, LocalDate to, ExportFormat format) {
+        List<StockSummaryItem> items = stockSummary(from, to);
+        byte[] content = format == ExportFormat.XLSX ? StockSummaryXlsx.write(items) : StockSummaryCsv.write(items);
+        String fileName = "stock-summary_%s_%s.%s".formatted(from, to, format.extension());
+        return new ReportFile(fileName, format.contentType(), content);
     }
 
     private static Map<Long, ProductMovement> byProduct(List<ProductMovement> movements) {

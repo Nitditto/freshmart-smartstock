@@ -1,10 +1,10 @@
 package com.freshmart.smartstock.controller;
 
-import com.freshmart.smartstock.dto.report.CsvFile;
+import com.freshmart.smartstock.dto.report.ExportFormat;
+import com.freshmart.smartstock.dto.report.ReportFile;
 import com.freshmart.smartstock.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -28,20 +28,19 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Reports", description = "Report exports")
 public class ReportController {
 
-    private static final MediaType TEXT_CSV_UTF8 = new MediaType("text", "csv", StandardCharsets.UTF_8);
-
     private final ReportService reportService;
 
     // No `produces = text/csv`: errors (400/403) must still be able to answer with the JSON envelope.
     @GetMapping("/stock-summary/export")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Download the stock movement report between two dates as CSV for Excel (ADMIN)")
+    @Operation(summary = "Download the stock movement report between two dates as csv or xlsx (ADMIN)")
     public ResponseEntity<byte[]> exportStockSummary(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        CsvFile file = reportService.exportStockSummaryCsv(from, to);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "csv") String format) {
+        ReportFile file = reportService.exportStockSummary(from, to, ExportFormat.parse(format));
         return ResponseEntity.ok()
-                .contentType(TEXT_CSV_UTF8)
+                .contentType(MediaType.parseMediaType(file.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         ContentDisposition.attachment().filename(file.fileName()).build().toString())
                 .body(file.content());
