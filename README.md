@@ -4,11 +4,11 @@ Backend quản lý kho cho FreshMart: mọi thay đổi tồn kho đi qua **phi�
 
 **Stack:** Java 17, Spring Boot 3.3, Spring Data JPA (Hibernate), MySQL 8, Flyway (migration), Spring Security + JWT (jjwt), springdoc-openapi (Swagger), JUnit 5 / Mockito / Testcontainers, Docker Compose.
 
-**Trạng thái:** cột Trạng thái trong `docs/api-contract.md` mục 3 là nguồn chính xác (`Xong` hoặc `Chưa`, `Chưa` nghĩa là còn trả 501).
-- Đã xong: đăng nhập/JWT, phân quyền, đổi mật khẩu, quản lý tài khoản, danh mục.
-- Đã xong: phiếu nhập và phiếu xuất (tạo/sửa/xác nhận/hủy; khóa dòng khi xác nhận nên không bán lố, thiếu tồn -> 409 + danh sách thiếu).
-- Đã xong: báo cáo `stock-summary` (JSON và CSV), LLM `POST /api/receipts/parse` (mock hoặc Ollama), seed 10 chứng từ.
-- Chưa xong: sản phẩm, nhà cung cấp, low-stock, lịch sử sản phẩm (Member B - đang ở PR).
+**Trạng thái:** mọi endpoint trong `docs/api-contract.md` mục 3 đã chạy được (cột Trạng thái là `Xong`); không còn endpoint nào trả 501.
+- Đăng nhập/JWT, phân quyền, đổi mật khẩu, quản lý tài khoản.
+- Danh mục, sản phẩm (tìm kiếm, phân trang, ẩn), nhà cung cấp, cảnh báo tồn thấp, lịch sử nhập/xuất của sản phẩm.
+- Phiếu nhập và phiếu xuất (tạo/sửa/xác nhận/hủy; khóa dòng khi xác nhận nên không bán lố, thiếu tồn -> 409 + danh sách thiếu).
+- Báo cáo `stock-summary` (JSON và CSV), LLM `POST /api/receipts/parse` (mock hoặc Ollama), seed 10 chứng từ.
 
 ## 1. Chạy nhanh bằng Docker Compose (khuyến nghị)
 
