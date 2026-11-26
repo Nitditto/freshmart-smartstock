@@ -62,14 +62,14 @@ Cột **Owner**: A/B/C/D/E theo `docs/plans/member-*.md`. Cột Trạng thái: `
 | PATCH `/api/users/{id}/status` | Khóa/mở khóa | ADMIN | 200, 400, 401, 403, 404, 409 | D | Xong |
 | GET `/api/categories` | Danh sách danh mục | any | 200, 401 | B | Xong |
 | POST `/api/categories` | Tạo danh mục | ADMIN | 201, 400, 401, 403, 409 | B | Xong |
-| GET `/api/products` | Tìm/lọc/sắp xếp/phân trang | any | 200, 400, 401 | B | Chưa |
-| GET `/api/products/{id}` | Chi tiết + tồn kho | any | 200, 401, 404 | B | Chưa |
-| POST `/api/products` | Tạo sản phẩm | ADMIN | 201, 400, 401, 403, 404, 409 | B | Chưa |
-| PUT `/api/products/{id}` | Sửa sản phẩm | ADMIN | 200, 400, 401, 403, 404, 409 | B | Chưa |
-| DELETE `/api/products/{id}` | Ẩn (soft delete) | ADMIN | 200, 401, 403, 404 | B | Chưa |
-| GET `/api/suppliers` | Danh sách NCC | any | 200, 401 | B | Chưa |
-| POST `/api/suppliers` | Tạo NCC | ADMIN | 201, 400, 401, 403 | B | Chưa |
-| PUT `/api/suppliers/{id}` | Sửa NCC | ADMIN | 200, 400, 401, 403, 404 | B | Chưa |
+| GET `/api/products` | Tìm/lọc/sắp xếp/phân trang | any | 200, 400, 401 | B | Xong |
+| GET `/api/products/{id}` | Chi tiết + tồn kho | any | 200, 401, 404 | B | Xong |
+| POST `/api/products` | Tạo sản phẩm | ADMIN | 201, 400, 401, 403, 404, 409 | B | Xong |
+| PUT `/api/products/{id}` | Sửa sản phẩm | ADMIN | 200, 400, 401, 403, 404, 409 | B | Xong |
+| DELETE `/api/products/{id}` | Ẩn (soft delete) | ADMIN | 200, 401, 403, 404 | B | Xong |
+| GET `/api/suppliers` | Danh sách NCC | any | 200, 401 | B | Xong |
+| POST `/api/suppliers` | Tạo NCC | ADMIN | 201, 400, 401, 403 | B | Xong |
+| PUT `/api/suppliers/{id}` | Sửa NCC | ADMIN | 200, 400, 401, 403, 404 | B | Xong |
 | POST `/api/receipts` | Tạo phiếu nhập nhiều dòng (DRAFT) | any | 201, 400, 401, 404 | D | Xong |
 | GET `/api/receipts` | Danh sách (lọc ngày/trạng thái) | any | 200, 401 | D | Xong |
 | GET `/api/receipts/{id}` | Chi tiết phiếu | any | 200, 401, 404 | D | Xong |
@@ -83,8 +83,8 @@ Cột **Owner**: A/B/C/D/E theo `docs/plans/member-*.md`. Cột Trạng thái: `
 | PUT `/api/issues/{id}` | Sửa phiếu DRAFT | owner/ADMIN | 200, 400, 401, 403, 404, 409 | C | Xong |
 | PATCH `/api/issues/{id}/confirm` | Xác nhận -> giảm tồn | owner/ADMIN (DAMAGED: ADMIN) | 200, 401, 403, 404, 409 | C | Xong |
 | PATCH `/api/issues/{id}/cancel` | Hủy phiếu DRAFT | owner/ADMIN | 200, 401, 403, 404, 409 | C | Xong |
-| GET `/api/inventory/low-stock` | Sản phẩm tồn <= MinStock | any | 200, 401 | B | Chưa |
-| GET `/api/products/{id}/history` | Lịch sử nhập/xuất (chỉ phiếu CONFIRMED, mới nhất trước, tối đa 500 dòng; `direction` IN/OUT, `documentType` RECEIPT/ISSUE) | any | 200, 401, 404 | B | Chưa |
+| GET `/api/inventory/low-stock` | Sản phẩm tồn <= MinStock | any | 200, 401 | B | Xong |
+| GET `/api/products/{id}/history` | Lịch sử nhập/xuất (chỉ phiếu CONFIRMED, mới nhất trước, tối đa 500 dòng; `direction` IN/OUT, `documentType` RECEIPT/ISSUE) | any | 200, 401, 404 | B | Xong |
 | GET `/api/reports/stock-summary?from=&to=` | Báo cáo biến động tồn: mọi sản phẩm (kể cả đã ẩn), tính theo `confirmedAt`, `to` trọn ngày | ADMIN | 200, 400, 401, 403 | E | Xong |
 | GET `/api/reports/stock-summary/export?from=&to=` | Tải báo cáo biến động tồn dạng CSV cho Excel (UTF-8 có BOM, chống CSV injection); lỗi vẫn trả JSON | ADMIN | 200, 400, 401, 403 | E | Xong |
 
