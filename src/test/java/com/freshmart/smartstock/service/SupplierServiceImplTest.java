@@ -97,7 +97,8 @@ class SupplierServiceImplTest {
 
         when(supplierRepository.findById(1L)).thenReturn(Optional.of(existing));
 
-        SupplierRequest request = new SupplierRequest("Công ty Thực phẩm Tươi Sống Việt", "0901000002", "Quận 7, TP.HCM");
+        SupplierRequest request = new SupplierRequest("Công ty Thực phẩm Tươi Sống Việt", "0901000002",
+                "Quận 7, TP.HCM");
         SupplierResponse response = service.update(1L, request);
 
         assertEquals(1L, response.id());
