@@ -16,6 +16,7 @@ Backend quản lý kho cho FreshMart: mọi thay đổi tồn kho đi qua **phi�
 cp .env.example .env          # rồi sửa mật khẩu + JWT_SECRET (>= 32 ký tự)
 docker compose up --build
 ```
+- Giao diện web: http://localhost:8081 (nginx phục vụ UI và chuyển `/api` sang backend)
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - Health: http://localhost:8080/actuator/health
 - Reset sạch dữ liệu trước khi demo: `docker compose down -v && docker compose up --build`
@@ -48,6 +49,20 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev,local,ollama   # profile `oll
 - Đổi model/địa chỉ bằng biến môi trường `LLM_MODEL`, `LLM_BASE_URL` (Docker: `http://host.docker.internal:11434/v1`).
 - Phản hồi có `"mock": false` là đang dùng model thật. Ollama tắt -> API trả **503**, nhập tay vẫn dùng được.
 - Dùng nhà cung cấp trên mạng (OpenAI, Groq, Gemini...) thì đặt `app.llm.api-key/base-url/model` trong `application-local.yml` hoặc biến `LLM_API_KEY`; **không bao giờ commit key**.
+
+### Giao diện web (`frontend/`)
+React 18+, TypeScript, Vite, Tailwind, TanStack Query; chỉ gọi các endpoint có trong `docs/api-contract.md`. Phong cách và quyết định thiết kế ở `frontend/design-system/MASTER.md`.
+```bash
+cd frontend
+npm ci
+npm run dev        # http://localhost:5173, tự chuyển /api sang http://localhost:8080 (cần backend đang chạy)
+npm run lint && npm run test && npm run build
+npm run gen:api    # sinh lại src/api/schema.ts từ /v3/api-docs khi backend đổi (không sửa tay file này)
+```
+- Màn hình: đăng nhập (nút điền sẵn tài khoản mẫu), tổng quan và cảnh báo tồn thấp, sản phẩm (tìm kiếm, lọc, sắp xếp, lịch sử nhập/xuất), phiếu nhập, nhập phiếu từ hóa đơn bằng AI, phiếu xuất (hộp thoại thiếu tồn khi gặp 409, cảnh báo sản phẩm vừa chạm mức tối thiểu), báo cáo tồn kho kèm tải CSV (ADMIN).
+- Muốn đăng nhập nhanh khi demo: tạo `frontend/.env.local` (git bỏ qua) với `VITE_DEMO_PASSWORD=<mật khẩu mẫu ở mục dưới>`; mẫu cấu hình ở `frontend/.env.example`.
+- Ẩn menu hoặc nút theo vai trò chỉ để tiện dùng; quyền thật do backend trả 403.
+- Chưa có màn hình quản lý danh mục, nhà cung cấp, tài khoản: dùng Swagger cho các thao tác đó.
 
 ### Migration (thay cho `dotnet ef database update`)
 Flyway **tự chạy** các file trong `src/main/resources/db/migration/` mỗi lần ứng dụng khởi động, nên chỉ cần khởi động ứng dụng là DB được tạo/cập nhật. Quy tắc phiên bản migration: xem `docs/git-flow.md`.
