@@ -32,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Invoice text -> SUGGESTED receipt. Pipeline: catalog -> prompt -> LLM -> JSON -> business validation -> supplier
@@ -62,8 +61,12 @@ public class ReceiptParseServiceImpl implements ReceiptParseService {
     private final PromptTemplates prompts;
     private final ModelInvoiceReader modelInvoiceReader;
 
+    /**
+     * Deliberately NOT @Transactional: the model call can take minutes (local Ollama), and a surrounding transaction
+     * would keep a pooled DB connection checked out the whole time. Each repository read below opens and releases
+     * its own connection; the products are fetched with their category, so nothing needs a session afterwards.
+     */
     @Override
-    @Transactional(readOnly = true)
     public ParseReceiptResponse parse(ParseReceiptRequest request) {
         Map<Long, Product> catalog = productRepository.search(null, null, true, Pageable.unpaged(Sort.by("id")))
                 .stream().collect(Collectors.toMap(Product::getId, Function.identity()));
