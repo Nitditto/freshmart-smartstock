@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,6 +16,8 @@ import com.freshmart.smartstock.domain.entity.StockIssue;
 import com.freshmart.smartstock.domain.entity.StockIssueDetail;
 import com.freshmart.smartstock.domain.entity.StockReceipt;
 import com.freshmart.smartstock.domain.entity.StockReceiptDetail;
+import com.freshmart.smartstock.domain.enums.MovementDirection;
+import com.freshmart.smartstock.domain.enums.MovementDocumentType;
 import com.freshmart.smartstock.dto.inventory.LowStockItem;
 import com.freshmart.smartstock.dto.inventory.ProductHistoryItem;
 import com.freshmart.smartstock.repository.ProductRepository;
@@ -22,12 +25,15 @@ import com.freshmart.smartstock.repository.StockIssueDetailRepository;
 import com.freshmart.smartstock.repository.StockReceiptDetailRepository;
 import com.freshmart.smartstock.service.impl.InventoryServiceImpl;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 
 @ExtendWith(MockitoExtension.class)
@@ -183,8 +189,8 @@ class InventoryServiceImplTest {
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
         assertEquals("Không tìm thấy sản phẩm 999", exception.getMessage());
-        verify(receiptDetailRepository, never()).findConfirmedByProductId(any());
-        verify(issueDetailRepository, never()).findConfirmedByProductId(any());
+        verify(receiptDetailRepository, never()).findConfirmedByProductId(any(), any());
+        verify(issueDetailRepository, never()).findConfirmedByProductId(any(), any());
     }
 
     @Test
@@ -219,28 +225,28 @@ class InventoryServiceImplTest {
         d3.setIssue(i1);
         d3.setQuantity(20);
 
-        when(receiptDetailRepository.findConfirmedByProductId(1L)).thenReturn(List.of(d1, d2));
-        when(issueDetailRepository.findConfirmedByProductId(1L)).thenReturn(List.of(d3));
+        when(receiptDetailRepository.findConfirmedByProductId(eq(1L), any())).thenReturn(List.of(d1, d2));
+        when(issueDetailRepository.findConfirmedByProductId(eq(1L), any())).thenReturn(List.of(d3));
 
         List<ProductHistoryItem> history = service.history(1L);
 
         assertEquals(3, history.size());
 
         assertEquals(t3, history.get(0).occurredAt());
-        assertEquals("OUT", history.get(0).direction());
-        assertEquals("ISSUE", history.get(0).documentType());
+        assertEquals(MovementDirection.OUT, history.get(0).direction());
+        assertEquals(MovementDocumentType.ISSUE, history.get(0).documentType());
         assertEquals("PX-20261122-001", history.get(0).documentCode());
         assertEquals(20, history.get(0).quantity());
 
         assertEquals(t2, history.get(1).occurredAt());
-        assertEquals("IN", history.get(1).direction());
-        assertEquals("RECEIPT", history.get(1).documentType());
+        assertEquals(MovementDirection.IN, history.get(1).direction());
+        assertEquals(MovementDocumentType.RECEIPT, history.get(1).documentType());
         assertEquals("PN-20261121-002", history.get(1).documentCode());
         assertEquals(30, history.get(1).quantity());
 
         assertEquals(t1, history.get(2).occurredAt());
-        assertEquals("IN", history.get(2).direction());
-        assertEquals("RECEIPT", history.get(2).documentType());
+        assertEquals(MovementDirection.IN, history.get(2).direction());
+        assertEquals(MovementDocumentType.RECEIPT, history.get(2).documentType());
         assertEquals("PN-20261120-001", history.get(2).documentCode());
         assertEquals(50, history.get(2).quantity());
     }
@@ -248,8 +254,8 @@ class InventoryServiceImplTest {
     @Test
     void historyAllowsInactiveProduct() {
         when(productRepository.existsById(2L)).thenReturn(true);
-        when(receiptDetailRepository.findConfirmedByProductId(2L)).thenReturn(List.of());
-        when(issueDetailRepository.findConfirmedByProductId(2L)).thenReturn(List.of());
+        when(receiptDetailRepository.findConfirmedByProductId(eq(2L), any())).thenReturn(List.of());
+        when(issueDetailRepository.findConfirmedByProductId(eq(2L), any())).thenReturn(List.of());
 
         List<ProductHistoryItem> history = service.history(2L);
 
@@ -260,8 +266,8 @@ class InventoryServiceImplTest {
     @Test
     void historyReturnsEmptyListWhenNoConfirmedDocuments() {
         when(productRepository.existsById(3L)).thenReturn(true);
-        when(receiptDetailRepository.findConfirmedByProductId(3L)).thenReturn(List.of());
-        when(issueDetailRepository.findConfirmedByProductId(3L)).thenReturn(List.of());
+        when(receiptDetailRepository.findConfirmedByProductId(eq(3L), any())).thenReturn(List.of());
+        when(issueDetailRepository.findConfirmedByProductId(eq(3L), any())).thenReturn(List.of());
 
         List<ProductHistoryItem> history = service.history(3L);
 
@@ -281,14 +287,14 @@ class InventoryServiceImplTest {
         d1.setReceipt(r1);
         d1.setQuantity(100);
 
-        when(receiptDetailRepository.findConfirmedByProductId(4L)).thenReturn(List.of(d1));
-        when(issueDetailRepository.findConfirmedByProductId(4L)).thenReturn(List.of());
+        when(receiptDetailRepository.findConfirmedByProductId(eq(4L), any())).thenReturn(List.of(d1));
+        when(issueDetailRepository.findConfirmedByProductId(eq(4L), any())).thenReturn(List.of());
 
         List<ProductHistoryItem> history = service.history(4L);
 
         assertEquals(1, history.size());
-        assertEquals("IN", history.get(0).direction());
-        assertEquals("RECEIPT", history.get(0).documentType());
+        assertEquals(MovementDirection.IN, history.get(0).direction());
+        assertEquals(MovementDocumentType.RECEIPT, history.get(0).documentType());
         assertEquals(100, history.get(0).quantity());
     }
 
@@ -305,14 +311,14 @@ class InventoryServiceImplTest {
         d1.setIssue(i1);
         d1.setQuantity(15);
 
-        when(receiptDetailRepository.findConfirmedByProductId(5L)).thenReturn(List.of());
-        when(issueDetailRepository.findConfirmedByProductId(5L)).thenReturn(List.of(d1));
+        when(receiptDetailRepository.findConfirmedByProductId(eq(5L), any())).thenReturn(List.of());
+        when(issueDetailRepository.findConfirmedByProductId(eq(5L), any())).thenReturn(List.of(d1));
 
         List<ProductHistoryItem> history = service.history(5L);
 
         assertEquals(1, history.size());
-        assertEquals("OUT", history.get(0).direction());
-        assertEquals("ISSUE", history.get(0).documentType());
+        assertEquals(MovementDirection.OUT, history.get(0).direction());
+        assertEquals(MovementDocumentType.ISSUE, history.get(0).documentType());
         assertEquals(15, history.get(0).quantity());
     }
 
@@ -332,8 +338,8 @@ class InventoryServiceImplTest {
         detail.setReceipt(receipt);
         detail.setQuantity(40);
 
-        when(receiptDetailRepository.findConfirmedByProductId(10L)).thenReturn(List.of(detail));
-        when(issueDetailRepository.findConfirmedByProductId(10L)).thenReturn(List.of());
+        when(receiptDetailRepository.findConfirmedByProductId(eq(10L), any())).thenReturn(List.of(detail));
+        when(issueDetailRepository.findConfirmedByProductId(eq(10L), any())).thenReturn(List.of());
 
         List<ProductHistoryItem> history = service.history(10L);
 
@@ -363,8 +369,8 @@ class InventoryServiceImplTest {
         issueDetail.setIssue(issue);
         issueDetail.setQuantity(20);
 
-        when(receiptDetailRepository.findConfirmedByProductId(11L)).thenReturn(List.of(receiptDetail));
-        when(issueDetailRepository.findConfirmedByProductId(11L)).thenReturn(List.of(issueDetail));
+        when(receiptDetailRepository.findConfirmedByProductId(eq(11L), any())).thenReturn(List.of(receiptDetail));
+        when(issueDetailRepository.findConfirmedByProductId(eq(11L), any())).thenReturn(List.of(issueDetail));
 
         List<ProductHistoryItem> history = service.history(11L);
 
@@ -372,4 +378,60 @@ class InventoryServiceImplTest {
         assertEquals(sameTime, history.get(0).occurredAt());
         assertEquals(sameTime, history.get(1).occurredAt());
     }
+
+    @Test
+    void historyPutsRowsWithoutConfirmedAtLastInsteadOfFailing() {
+        when(productRepository.existsById(20L)).thenReturn(true);
+        StockReceiptDetail undated = receiptDetail("PN-20261121-009", null, 5);
+        StockReceiptDetail dated = receiptDetail("PN-20261121-001", Instant.parse("2026-11-21T09:00:00Z"), 7);
+        when(receiptDetailRepository.findConfirmedByProductId(eq(20L), any())).thenReturn(List.of(undated, dated));
+        when(issueDetailRepository.findConfirmedByProductId(eq(20L), any())).thenReturn(List.of());
+
+        List<ProductHistoryItem> history = service.history(20L);
+
+        assertEquals(List.of("PN-20261121-001", "PN-20261121-009"),
+                history.stream().map(ProductHistoryItem::documentCode).toList());
+    }
+
+    @Test
+    void historyReadsAtMostTheLatestRowsFromEachSideAndReturnsAtMostTheLimit() {
+        when(productRepository.existsById(21L)).thenReturn(true);
+        Instant base = Instant.parse("2026-01-01T00:00:00Z");
+        List<StockReceiptDetail> manyReceipts = new ArrayList<>();
+        for (int i = 0; i < InventoryServiceImpl.MAX_HISTORY_ITEMS; i++) {
+            manyReceipts.add(receiptDetail("PN-%03d".formatted(i), base.plusSeconds(i), 1));
+        }
+        when(receiptDetailRepository.findConfirmedByProductId(eq(21L), any())).thenReturn(manyReceipts);
+        when(issueDetailRepository.findConfirmedByProductId(eq(21L), any())).thenReturn(
+                List.of(issueDetail("PX-NEWEST", base.plusSeconds(10_000), 2)));
+
+        List<ProductHistoryItem> history = service.history(21L);
+
+        assertEquals(InventoryServiceImpl.MAX_HISTORY_ITEMS, history.size());
+        assertEquals("PX-NEWEST", history.get(0).documentCode());
+        ArgumentCaptor<Pageable> page = ArgumentCaptor.forClass(Pageable.class);
+        verify(receiptDetailRepository).findConfirmedByProductId(eq(21L), page.capture());
+        assertEquals(InventoryServiceImpl.MAX_HISTORY_ITEMS, page.getValue().getPageSize());
+    }
+
+    private static StockReceiptDetail receiptDetail(String code, Instant confirmedAt, int quantity) {
+        StockReceipt receipt = new StockReceipt();
+        receipt.setCode(code);
+        receipt.setConfirmedAt(confirmedAt);
+        StockReceiptDetail detail = new StockReceiptDetail();
+        detail.setReceipt(receipt);
+        detail.setQuantity(quantity);
+        return detail;
+    }
+
+    private static StockIssueDetail issueDetail(String code, Instant confirmedAt, int quantity) {
+        StockIssue issue = new StockIssue();
+        issue.setCode(code);
+        issue.setConfirmedAt(confirmedAt);
+        StockIssueDetail detail = new StockIssueDetail();
+        detail.setIssue(issue);
+        detail.setQuantity(quantity);
+        return detail;
+    }
 }
+

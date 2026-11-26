@@ -36,6 +36,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -498,8 +499,8 @@ class CatalogIntegrationTest extends AbstractIntegrationTest {
             // Receipt 3: CONFIRMED at t3 (qty = 30)
             data.receipt(admin, p, 30, DocumentStatus.CONFIRMED, t3);
 
-            assertEquals(2, receiptDetailRepository.findConfirmedByProductId(p.getId()).size());
-            assertEquals(1, issueDetailRepository.findConfirmedByProductId(p.getId()).size());
+            assertEquals(2, receiptDetailRepository.findConfirmedByProductId(p.getId(), Pageable.unpaged()).size());
+            assertEquals(1, issueDetailRepository.findConfirmedByProductId(p.getId(), Pageable.unpaged()).size());
 
             mockMvc.perform(get("/api/products/" + p.getId() + "/history")
                             .header(HttpHeaders.AUTHORIZATION, staffToken))
