@@ -2,7 +2,7 @@
 
 > Đọc trước: `00-shared.md` (phân chia, helper có sẵn, luật không chờ nhau), `docs/api-contract.md` mục 2, mục 5.
 > **Phần của C = nặng điểm nhất (Logic nghiệp vụ 20đ).** Phiếu nhập đã chuyển sang D -> C tập trung làm *thật sâu* một chứng từ.
-> Slide: **6** (xuất kho + transaction + đồng thời; D trình bày nửa đầu), cùng chia slide 11.
+> Slide: **6** (nhập/xuất kho: quy tắc trạng thái, transaction, đồng thời; C trình bày cả slide, phiếu nhập do D làm cùng quy tắc), cùng chia slide 11.
 
 ## 1. Phạm vi
 
@@ -31,7 +31,7 @@ Ngoài phạm vi C: phiếu nhập (D), sản phẩm/low-stock endpoint (B), see
 - [ ] Hai request confirm đồng thời trên cùng sản phẩm không bao giờ làm tồn âm (test đa luồng).
 - [ ] `DocumentCodeGenerator` không trùng mã khi tạo đồng thời (retry - xem 5.6).
 - [ ] >= 15 unit test (Mockito) + >= 3 integration test (Testcontainers) + 1 test đồng thời.
-- [ ] Slide 6 (phần xuất kho) + trả lời được mục 8. >= 3 PR merged.
+- [ ] Slide 6 (nhập/xuất kho) + trả lời được mục 8. >= 3 PR merged.
 
 ## 4. Thiết kế (đã quyết, làm theo)
 
