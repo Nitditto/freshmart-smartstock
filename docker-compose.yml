@@ -39,5 +39,14 @@ services:
     ports:
       - "8080:8080"
 
+  web:
+    build: ./frontend
+    container_name: smartstock-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8081:80"
+
 volumes:
   mysql-data:

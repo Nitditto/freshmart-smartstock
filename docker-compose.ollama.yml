@@ -1,0 +1,14 @@
+# Overlay: run the API with the real local model (Ollama on the host) instead of the mock.
+#   docker compose -f docker-compose.yml -f docker-compose.ollama.yml up -d --build
+# Needs Ollama running on the host with the model pulled once: `ollama pull qwen2.5:3b`.
+# The values below win over .env, so nothing has to be edited there. Nothing here is a secret.
+services:
+  api:
+    environment:
+      SPRING_PROFILES_ACTIVE: dev,ollama
+      LLM_API_KEY: ollama
+      LLM_BASE_URL: http://host.docker.internal:11434/v1
+      LLM_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    # Docker Desktop resolves host.docker.internal by itself; plain Linux Docker needs this line.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

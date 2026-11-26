@@ -71,6 +71,7 @@ Dùng pattern **khi nó giải quyết vấn đề có thật**; không thêm l�
 - **Tiêu đề 1 dòng ≤ 72 ký tự.** Nếu cần thân: **cách 1 dòng trống** rồi tối đa **1 dòng thân ≤ 72 ký tự** (tổng ≤ 2 dòng có nội dung; dòng trống bắt buộc để Git nhận ra thân commit).
 - Type bắt buộc: `feat` `fix` `docs` `refactor` `test` (thêm `chore` cho build/CI/config). Không scope bắt buộc; nếu dùng: `feat(issue): ...`.
 - Tiêu đề: thể mệnh lệnh, **chữ thường đầu câu**, không dấu chấm cuối, tiếng Anh (hoặc tiếng Việt không dấu – chọn một và giữ trong cả nhóm). Nói **cái gì đổi**; thân (nếu có) nói **vì sao**.
+- **Cấm mọi trailer đồng tác giả/attribution** trong commit và mô tả PR: không `Co-Authored-By:`, không `Generated with Claude Code`, không tên/email công cụ AI. Commit chỉ mang tên người commit. (Đã tắt tự động trong `.claude/settings.json`; vẫn phải tự kiểm trước khi commit.)
 - Một commit = một thay đổi logic, build vẫn xanh. Không gộp format + logic + đổi tên vào một commit. Không commit `WIP`, `fix`, `update`, `...`.
 - Không commit secret, `target/`, `.idea/`, file sinh tự động, dữ liệu thật. Không `--no-verify`, không force-push lên `develop`/`main`.
 - Ví dụ tốt:
@@ -114,4 +115,4 @@ Chi tiết kiến trúc ở `AGENTS.md` §12 và `docs/plans/ui-shared.md`.
 ## 7. Checklist trước khi báo "xong"
 - [ ] Đúng phạm vi, đúng file của mình · [ ] theo mẫu `CategoryServiceImpl` · [ ] không trả entity/`passwordHash`
 - [ ] test cả nhánh lỗi, `mvn -B verify` xanh (hoặc nói rõ chưa chạy) · [ ] comment chỉ giải thích "vì sao", không code chết/TODO mồ côi
-- [ ] commit theo §4 (tiêu đề ≤ 72, thân ≤ 1 dòng cách 1 dòng trống) · [ ] hợp đồng/tài liệu đã cập nhật nếu đổi hành vi
+- [ ] commit theo §4 (tiêu đề ≤ 72, thân ≤ 1 dòng cách 1 dòng trống, **không Co-Authored-By**) · [ ] hợp đồng/tài liệu đã cập nhật nếu đổi hành vi

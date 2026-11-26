@@ -1,0 +1,11 @@
+# Profile `ollama`: real LLM running on the developer's own machine (https://ollama.com), no cloud, no cost.
+# Run with profiles dev,local,ollama. Nothing here is a secret, so this file is committed.
+# Ollama ignores the API key; LlmConfig only switches from the mock to HttpLlmService when a key is set,
+# hence the placeholder value. Inside Docker use LLM_BASE_URL=http://host.docker.internal:11434/v1.
+app:
+  llm:
+    api-key: ${LLM_API_KEY:ollama}
+    base-url: ${LLM_BASE_URL:http://localhost:11434/v1}
+    model: ${LLM_MODEL:qwen2.5:3b}
+    # A local model on CPU can need far more than the 30 s default to read the catalog + invoice.
+    timeout-seconds: ${LLM_TIMEOUT_SECONDS:180}

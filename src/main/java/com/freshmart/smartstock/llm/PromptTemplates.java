@@ -16,8 +16,27 @@ import org.springframework.util.StreamUtils;
 @Component
 public class PromptTemplates {
 
-    public static final String RECEIPT_PARSE_SYSTEM = "prompts/receipt-parse-v1.system.txt";
-    public static final String RECEIPT_PARSE_USER = "prompts/receipt-parse-v1.user.txt";
+    /** Prompt version used by the running app; older versions stay in the repo for the before/after comparison. */
+    public static final String RECEIPT_PARSE_VERSION = "v2";
+
+    private final String receiptParseVersion;
+
+    public PromptTemplates() {
+        this(RECEIPT_PARSE_VERSION);
+    }
+
+    /** Lets the invoice evaluation run any prompt version against the same pipeline. */
+    public PromptTemplates(String receiptParseVersion) {
+        this.receiptParseVersion = receiptParseVersion;
+    }
+
+    public String receiptParseSystemPath() {
+        return "prompts/receipt-parse-%s.system.txt".formatted(receiptParseVersion);
+    }
+
+    public String receiptParseUserPath() {
+        return "prompts/receipt-parse-%s.user.txt".formatted(receiptParseVersion);
+    }
 
     public String load(String path) {
         try (InputStream in = new ClassPathResource(path).getInputStream()) {

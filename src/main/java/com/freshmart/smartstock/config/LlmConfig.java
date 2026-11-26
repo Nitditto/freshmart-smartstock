@@ -1,5 +1,6 @@
 package com.freshmart.smartstock.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.freshmart.smartstock.llm.HttpLlmService;
 import com.freshmart.smartstock.llm.LlmService;
 import com.freshmart.smartstock.llm.MockLlmService;
@@ -18,11 +19,11 @@ public class LlmConfig {
     private static final Logger log = LoggerFactory.getLogger(LlmConfig.class);
 
     @Bean
-    public LlmService llmService(AppProperties props) {
+    public LlmService llmService(AppProperties props, ObjectMapper objectMapper) {
         AppProperties.Llm llm = props.llm();
         if (llm == null || !llm.hasApiKey()) {
             log.warn("app.llm.api-key is empty -> using MockLlmService");
-            return new MockLlmService();
+            return new MockLlmService(objectMapper);
         }
         log.info("Using HttpLlmService (model={})", llm.model());
         return new HttpLlmService(llm);

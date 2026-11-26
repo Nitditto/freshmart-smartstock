@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -20,14 +21,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     /**
      * Keyword matches name or SKU (case-insensitive). categoryId is optional.
      * onlyActive=true hides soft-deleted products.
+     * The keyword is a LIKE pattern body whose % and _ must already be escaped with '!' (see LikePattern).
      */
+    @EntityGraph(attributePaths = "category")
     @Query("""
             select p from Product p
             where (:onlyActive = false or p.active = true)
               and (:categoryId is null or p.category.id = :categoryId)
               and (:keyword is null
-                   or lower(p.name) like lower(concat('%', :keyword, '%'))
-                   or lower(p.sku) like lower(concat('%', :keyword, '%')))
+                   or lower(p.name) like lower(concat('%', :keyword, '%')) escape '!'
+                   or lower(p.sku) like lower(concat('%', :keyword, '%')) escape '!')
             """)
     Page<Product> search(@Param("keyword") String keyword,
                          @Param("categoryId") Long categoryId,

@@ -1,10 +1,14 @@
-# SmartStock – Warehouse Management REST API (FreshMart)
+# SmartStock - Warehouse Management REST API (FreshMart)
 
 Backend quản lý kho cho FreshMart: mọi thay đổi tồn kho đi qua **phiếu nhập / phiếu xuất**, mỗi vai trò chỉ làm đúng thao tác được phép, kèm tính năng **LLM** gợi ý phiếu nhập từ hóa đơn văn bản.
 
-**Stack:** Java 17 · Spring Boot 3.3 · Spring Data JPA (Hibernate) · MySQL 8 · Flyway (migration) · Spring Security + JWT (jjwt) · springdoc-openapi (Swagger) · JUnit 5 / Mockito / Testcontainers · Docker Compose.
+**Stack:** Java 17, Spring Boot 3.3, Spring Data JPA (Hibernate), MySQL 8, Flyway (migration), Spring Security + JWT (jjwt), springdoc-openapi (Swagger), JUnit 5 / Mockito / Testcontainers, Docker Compose.
 
-> Khung dự án đã chạy được phần đăng nhập, phân quyền, Swagger, định dạng phản hồi chung, xử lý lỗi, migration và danh mục (làm mẫu). Các endpoint còn lại trả **501** cho tới khi owner hoàn thành – xem `docs/plans/`.
+**Trạng thái:** mọi endpoint trong `docs/api-contract.md` mục 3 đã chạy được (cột Trạng thái là `Xong`); không còn endpoint nào trả 501.
+- Đăng nhập/JWT, phân quyền, đổi mật khẩu, quản lý tài khoản.
+- Danh mục, sản phẩm (tìm kiếm, phân trang, ẩn), nhà cung cấp, cảnh báo tồn thấp, lịch sử nhập/xuất của sản phẩm.
+- Phiếu nhập và phiếu xuất (tạo/sửa/xác nhận/hủy; khóa dòng khi xác nhận nên không bán lố, thiếu tồn -> 409 + danh sách thiếu).
+- Báo cáo `stock-summary` (JSON, tải CSV hoặc Excel), LLM `POST /api/receipts/parse` (mock hoặc Ollama), seed 10 chứng từ.
 
 ## 1. Chạy nhanh bằng Docker Compose (khuyến nghị)
 
@@ -12,8 +16,15 @@ Backend quản lý kho cho FreshMart: mọi thay đổi tồn kho đi qua **phi�
 cp .env.example .env          # rồi sửa mật khẩu + JWT_SECRET (>= 32 ký tự)
 docker compose up --build
 ```
+- Giao diện web: http://localhost:8081 (nginx phục vụ UI và chuyển `/api` sang backend)
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - Health: http://localhost:8080/actuator/health
+- Reset sạch dữ liệu trước khi demo: `docker compose down -v && docker compose up --build`
+- **Dùng model thật (Ollama) thay cho mock**, nên dùng khi demo. Mở Ollama, `ollama pull qwen2.5:3b` một lần, rồi chạy thêm file ghi đè, không phải sửa `.env`:
+  ```bash
+  docker compose -f docker-compose.yml -f docker-compose.ollama.yml up -d --build
+  ```
+  Phản hồi `POST /api/receipts/parse` có `"mock": false` và UI hiện nhãn "Gợi ý từ AI". Chạy `docker compose up` không kèm file này thì app dùng mock (key rỗng). Ollama giải phóng model sau khoảng 5 phút không dùng nên lần gọi đầu có thể chậm vài giây. Đổi model bằng biến `OLLAMA_MODEL`.
 
 ## 2. Chạy local (IDE / Maven)
 
@@ -33,6 +44,30 @@ cp src/main/resources/application-local.example.yml src/main/resources/applicati
 mvn spring-boot:run -Dspring-boot.run.profiles=dev,local
 ```
 
+### LLM thật cho `POST /api/receipts/parse` (Ollama, chạy trên máy, không cần API key)
+Mặc định không có key -> `MockLlmService`. Muốn dùng model thật:
+```bash
+ollama pull qwen2.5:3b                                            # một lần
+mvn spring-boot:run -Dspring-boot.run.profiles=dev,local,ollama   # profile `ollama` = application-ollama.yml
+```
+- Đổi model/địa chỉ bằng biến môi trường `LLM_MODEL`, `LLM_BASE_URL` (Docker: `http://host.docker.internal:11434/v1`). Với Docker dùng `docker-compose.ollama.yml` như ở mục 1.
+- Phản hồi có `"mock": false` là đang dùng model thật. Ollama tắt -> API trả **503**, nhập tay vẫn dùng được.
+- Dùng nhà cung cấp trên mạng (OpenAI, Groq, Gemini...) thì đặt `app.llm.api-key/base-url/model` trong `application-local.yml` hoặc biến `LLM_API_KEY`; **không bao giờ commit key**.
+
+### Giao diện web (`frontend/`)
+React 18+, TypeScript, Vite, Tailwind, TanStack Query; chỉ gọi các endpoint có trong `docs/api-contract.md`. Phong cách và quyết định thiết kế ở `frontend/design-system/MASTER.md`.
+```bash
+cd frontend
+npm ci
+npm run dev        # http://localhost:5173, tự chuyển /api sang http://localhost:8080 (cần backend đang chạy)
+npm run lint && npm run test && npm run build
+npm run gen:api    # sinh lại src/api/schema.ts từ /v3/api-docs khi backend đổi (không sửa tay file này)
+```
+- Màn hình: đăng nhập (nút điền sẵn tài khoản mẫu), tổng quan và cảnh báo tồn thấp, sản phẩm (tìm kiếm, lọc, sắp xếp, lịch sử nhập/xuất), phiếu nhập, nhập phiếu từ hóa đơn bằng AI, phiếu xuất (hộp thoại thiếu tồn khi gặp 409, cảnh báo sản phẩm vừa chạm mức tối thiểu), báo cáo tồn kho kèm nút Xuất CSV và Xuất Excel (ADMIN).
+- Muốn đăng nhập nhanh khi demo: tạo `frontend/.env.local` (git bỏ qua) với `VITE_DEMO_PASSWORD=<mật khẩu mẫu ở mục dưới>`; mẫu cấu hình ở `frontend/.env.example`.
+- Ẩn menu hoặc nút theo vai trò chỉ để tiện dùng; quyền thật do backend trả 403.
+- Chưa có màn hình quản lý danh mục, nhà cung cấp, tài khoản: dùng Swagger cho các thao tác đó.
+
 ### Migration (thay cho `dotnet ef database update`)
 Flyway **tự chạy** các file trong `src/main/resources/db/migration/` mỗi lần ứng dụng khởi động, nên chỉ cần khởi động ứng dụng là DB được tạo/cập nhật. Quy tắc phiên bản migration: xem `docs/git-flow.md`.
 
@@ -44,47 +79,52 @@ Flyway **tự chạy** các file trong `src/main/resources/db/migration/` mỗi 
 | STAFF | `staff1@freshmart.local` |
 | STAFF | `staff2@freshmart.local` |
 
-Dữ liệu seed: 1 ADMIN, 2 STAFF, 5 danh mục, 30 sản phẩm, 3 nhà cung cấp (+ 10 chứng từ – xem `plans/member-a`).
+Dữ liệu seed (chạy khi DB trống, chạy lại không nhân đôi): 1 ADMIN, 2 STAFF, 5 danh mục, 30 sản phẩm, 3 nhà cung cấp và **10 chứng từ** tạo qua service thật - 5 phiếu nhập CONFIRMED, 1 phiếu nhập DRAFT, 1 phiếu nhập CANCELLED, 2 phiếu xuất CONFIRMED, 1 phiếu xuất `DAMAGED` để DRAFT chờ ADMIN duyệt. Tồn kho chỉ đến từ các phiếu đã xác nhận; sau seed có 4 sản phẩm low-stock để demo (`DUO-006`, `TCA-004`, `RCQ-001`, `RCQ-003`).
 
 ## 3. Dùng Swagger
-1. `POST /api/auth/login` → copy `data.accessToken`.
-2. Bấm **Authorize** (góc phải trên) → dán token (không cần gõ chữ `Bearer`).
+1. `POST /api/auth/login` -> copy `data.accessToken`.
+2. Bấm **Authorize** (góc phải trên) -> dán token (không cần gõ chữ `Bearer`).
 3. Gọi các API. STAFF gọi API của ADMIN sẽ nhận **403**.
+4. Xuất báo cáo tồn (ADMIN): `GET /api/reports/stock-summary/export?from=2026-11-01&to=2026-11-30&format=xlsx` rồi bấm *Download file*. `format` là `xlsx` (Excel, nên dùng) hoặc `csv` (mặc định). Excel đọc CSV theo dấu phân cách của từng máy (máy tiếng Việt thường dùng dấu chấm phẩy nên cả dòng có thể dồn vào một cột), vì vậy file `.xlsx` luôn đúng cột.
 
 ## 4. Test
 ```bash
 mvn test            # unit test + integration test (cần Docker cho Testcontainers; tự bỏ qua nếu không có Docker)
 mvn verify          # như CI; báo cáo coverage: target/site/jacoco/index.html
+
+# Đo độ chính xác LLM trên 8 hóa đơn mẫu với model thật (chạy tay, không chạy trong CI)
+mvn test -Dtest=InvoiceEvaluationTest -Dllm.eval.base-url=http://localhost:11434/v1 -Dllm.eval.model=qwen2.5:3b -Dllm.eval.prompt=v2
 ```
+Kết quả đo và lý do thay đổi prompt v1 -> v2: `docs/prompt-log.md`.
 
 ## 5. Cấu hình (biến môi trường)
 
 | Biến | Ý nghĩa | Bắt buộc |
 |---|---|---|
 | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Kết nối MySQL | có |
-| `JWT_SECRET` | Khóa ký JWT, ≥ 32 ký tự | **có** (thiếu → app không chạy) |
-| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | LLM tương thích OpenAI; trống key → dùng mock | không |
-| `SPRING_PROFILES_ACTIVE` | `dev` để seed dữ liệu mẫu | không |
+| `JWT_SECRET` | Khóa ký JWT, >= 32 ký tự | **có** (thiếu -> app không chạy) |
+| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_TIMEOUT_SECONDS` | LLM tương thích OpenAI (OpenAI, Groq, Gemini, Ollama); trống key -> dùng mock. `LLM_TIMEOUT_SECONDS` chỉ áp dụng với profile `ollama` | không |
+| `SPRING_PROFILES_ACTIVE` | `dev` để seed dữ liệu mẫu; thêm `ollama` để dùng model trên máy | không |
 
 ## 6. Cấu trúc thư mục
-Xem `docs/architecture.md`. Tóm tắt: `controller → service → repository`, DTO ở `dto/`, entity ở `domain/`, migration ở `resources/db/migration/`, prompt ở `resources/prompts/`.
+Xem `docs/architecture.md`. Tóm tắt: `controller -> service -> repository`, DTO ở `dto/`, entity ở `domain/`, migration ở `resources/db/migration/`, prompt ở `resources/prompts/`.
 
 ## 7. Tài liệu
 | File | Nội dung |
 |---|---|
 | `docs/user-stories.md` | User story + tiêu chí chấp nhận |
-| `docs/erd.md` | ERD (Mermaid) + lý do thiết kế |
+| `docs/erd.md` | ERD (hình `docs/erd.png` vẽ bằng dbdiagram, Mermaid) + lý do thiết kế + kết quả `EXPLAIN` |
 | `docs/architecture.md` | Kiến trúc, MVC vs MSA, luồng, giao dịch/khóa |
 | `docs/api-contract.md` | **Hợp đồng API chung** (endpoint, role, mã lỗi, payload) |
 | `docs/git-flow.md` | Nhánh, PR, commit, tag, cấp phát số migration, lịch |
 | `docs/prompt-log.md` | Prompt LLM + kết quả 8 hóa đơn + nhật ký dùng AI |
-| `docs/plans/member-a … e.md` | Kế hoạch chi tiết cho từng thành viên |
+| `docs/plans/member-a ... e.md` | Kế hoạch chi tiết cho từng thành viên |
 
 ## 8. Nhóm
 | Thành viên | Phụ trách | Kế hoạch |
 |---|---|---|
 | A | ERD, user story, entity, migration, seed | `docs/plans/member-a-erd-data.md` |
 | B | Category/Product/Supplier API, low-stock, lịch sử | `docs/plans/member-b-catalog-inventory.md` |
-| C | Phiếu nhập/xuất, transaction, unit test | `docs/plans/member-c-documents.md` |
-| D | JWT, phân quyền, user, response chung, Swagger | `docs/plans/member-d-security-platform.md` |
+| C | Phiếu xuất, xác nhận an toàn khi đồng thời, mã chứng từ | `docs/plans/member-c-documents.md` |
+| D | JWT, phân quyền, user, phiếu nhập, response chung, Swagger | `docs/plans/member-d-security-platform.md` |
 | E | LLM, prompt log, báo cáo, Git, PPT | `docs/plans/member-e-llm-report-ppt.md` |
