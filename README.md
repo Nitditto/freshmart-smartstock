@@ -20,7 +20,11 @@ docker compose up --build
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - Health: http://localhost:8080/actuator/health
 - Reset sạch dữ liệu trước khi demo: `docker compose down -v && docker compose up --build`
-- Dùng Ollama trên máy thay cho mock: trong `.env` đặt `SPRING_PROFILES_ACTIVE=dev,ollama`, `LLM_API_KEY=ollama`, `LLM_BASE_URL=http://host.docker.internal:11434/v1`, `LLM_MODEL=qwen2.5:3b` (compose luôn truyền các biến này nên phải đặt đủ; key rỗng -> app dùng mock).
+- **Dùng model thật (Ollama) thay cho mock**, nên dùng khi demo. Mở Ollama, `ollama pull qwen2.5:3b` một lần, rồi chạy thêm file ghi đè, không phải sửa `.env`:
+  ```bash
+  docker compose -f docker-compose.yml -f docker-compose.ollama.yml up -d --build
+  ```
+  Phản hồi `POST /api/receipts/parse` có `"mock": false` và UI hiện nhãn "Gợi ý từ AI". Chạy `docker compose up` không kèm file này thì app dùng mock (key rỗng). Ollama giải phóng model sau khoảng 5 phút không dùng nên lần gọi đầu có thể chậm vài giây. Đổi model bằng biến `OLLAMA_MODEL`.
 
 ## 2. Chạy local (IDE / Maven)
 
@@ -46,7 +50,7 @@ Mặc định không có key -> `MockLlmService`. Muốn dùng model thật:
 ollama pull qwen2.5:3b                                            # một lần
 mvn spring-boot:run -Dspring-boot.run.profiles=dev,local,ollama   # profile `ollama` = application-ollama.yml
 ```
-- Đổi model/địa chỉ bằng biến môi trường `LLM_MODEL`, `LLM_BASE_URL` (Docker: `http://host.docker.internal:11434/v1`).
+- Đổi model/địa chỉ bằng biến môi trường `LLM_MODEL`, `LLM_BASE_URL` (Docker: `http://host.docker.internal:11434/v1`). Với Docker dùng `docker-compose.ollama.yml` như ở mục 1.
 - Phản hồi có `"mock": false` là đang dùng model thật. Ollama tắt -> API trả **503**, nhập tay vẫn dùng được.
 - Dùng nhà cung cấp trên mạng (OpenAI, Groq, Gemini...) thì đặt `app.llm.api-key/base-url/model` trong `application-local.yml` hoặc biến `LLM_API_KEY`; **không bao giờ commit key**.
 
