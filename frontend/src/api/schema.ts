@@ -344,7 +344,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Download the stock movement report between two dates as CSV for Excel (ADMIN) */
+        /** Download the stock movement report between two dates as csv or xlsx (ADMIN) */
         get: operations["exportStockSummary"];
         put?: never;
         post?: never;
@@ -2797,6 +2797,7 @@ export interface operations {
             query: {
                 from: string;
                 to: string;
+                format?: string;
             };
             header?: never;
             path?: never;
