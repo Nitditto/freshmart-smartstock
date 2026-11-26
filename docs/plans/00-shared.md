@@ -17,7 +17,7 @@ SmartStock - REST API quản lý kho cho FreshMart (đề CLT, OJT KITS 2026). N
 | Seed 10 chứng từ | A (gọi service C) | **A, gọi `ReceiptService` (D) + `IssueService` (C)** sau khi hai bên merge create/confirm (~24/11) | Giữ nguyên plan A; C, D chỉ cần ổn định `create`/`confirm` trước 23/11 |
 | Query lịch sử | B + E dùng chung repo | **B** (2 `*DetailRepository`); E dùng `ReportRepository` mới | tránh sửa cùng một file |
 
-Slide: C = slide 6 (xuất kho + transaction + đồng thời); D = slide 5 (JWT) + **nửa đầu slide 6** (quy tắc trạng thái + phiếu nhập).
+Slide, theo thứ tự người nói A, D, C, B, E (chi tiết: `docs/slides-outline.md`): A = slide 1-3; D = slide 4-5; C = slide 6 (cả nhập và xuất kho, transaction, đồng thời); B = slide 7; E = slide 8-10; slide 11 cả nhóm.
 
 ### Bảng file sở hữu (chỉ sửa file của mình; cần sửa file người khác -> mở issue/nhắn, không tự sửa)
 

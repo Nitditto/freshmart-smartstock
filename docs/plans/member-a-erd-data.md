@@ -1,7 +1,7 @@
 # Kế hoạch Thành viên A - ERD, User Story, Entity, Migration, Dữ liệu mẫu
 
 **Vai trò thêm:** "người giữ cổng migration" (mọi file `V*.sql` phải qua A).
-**Slide phụ trách:** 2 (Xác định vấn đề + User Story chính), 3 (Thiết kế ERD). Cùng chia slide 11 (đóng góp cá nhân).
+**Slide phụ trách:** 1 (Bìa), 2 (Xác định vấn đề + User Story chính), 3 (Thiết kế ERD); A là người mở đầu buổi thuyết trình. Cùng chia slide 11 (đóng góp cá nhân).
 
 > Bối cảnh chung, phân chia C/D, helper dùng chung và luật "không chờ nhau": xem `00-shared.md`.
 
@@ -36,7 +36,7 @@ Không thuộc A: logic API (B, C, D), LLM/báo cáo (E).
 - [ ] Ứng dụng khởi động sạch trên MySQL **trống** (Flyway tạo đủ bảng), không lỗi mapping khi gọi mọi repository.
 - [ ] `DataSeeder` phần 1 (đã có) + **phần 2: 10 chứng từ** tạo qua service thật.
 - [ ] Test repository (Testcontainers) cho các query tự viết.
-- [ ] Slide 2, 3 xong, A trả lời được các câu "vì sao" ở mục 7.
+- [ ] Slide 1, 2, 3 xong, A trả lời được các câu "vì sao" ở mục 7.
 - [ ] >= 3 PR đã merge.
 
 ## 3. Các file A sở hữu

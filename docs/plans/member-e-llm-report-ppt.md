@@ -2,7 +2,7 @@
 
 > Đọc trước: `00-shared.md`, `docs/api-contract.md` mục 5 (mục 8, 14, 16), `docs/prompt-log.md`.
 > Điểm liên quan: **Prompt LLM 15đ + Git Flow 10đ + PPT 5đ** + báo cáo (logic).
-> Slide: **1** (bìa), **4** (API + kiến trúc, phối hợp D), **8** (LLM), **9** (demo - điều phối), **10** (Git Flow), **11**. Chủ trì cả bộ PPT và rà tính thống nhất.
+> Slide: **8** (LLM), **9** (demo - điều phối), **10** (Git Flow), **11** (chốt cuối). E nói liền ba slide cuối, sau B. Chủ trì cả bộ PPT và rà tính thống nhất; khung từng slide ở `docs/slides-outline.md`.
 > Tải của E nặng -> xem mục 10 (cắt bớt nếu trễ).
 
 ## 1. Phạm vi
@@ -120,19 +120,22 @@ Dùng `DocumentGuard.startOfDay(from, clock)` / `startOfNextDay(to, clock)` (mú
 - Rà `git log -p` tìm secret; `.gitignore` chặn `target/`, `.env`, `application-local.yml`.
 
 ## 7. Bộ PPT (11 slide)
-| # | Slide | Người viết | E kiểm |
-|---|---|---|---|
-| 1 | Bìa | E | |
-| 2 | Vấn đề + User Story | A | thuật ngữ |
-| 3 | ERD + lý do | A | khớp `erd.png` & SQL |
-| 4 | Endpoint, RESTful, MVC vs MSA | D + E | khớp `api-contract.md` |
-| 5 | JWT & phân quyền | D | khớp ma trận quyền |
-| 6 | Nhập/xuất kho (D: quy tắc + phiếu nhập; C: phiếu xuất + đồng thời) | D, C | |
-| 7 | Tồn kho & cảnh báo | B (+C) | |
-| 8 | LLM + 8 hóa đơn trước/sau | E | số khớp `prompt-log.md` |
-| 9 | Demo Swagger (kịch bản `00-shared.md` mục 7) | tất cả | tập dượt đúng giờ |
-| 10 | Git Flow (ảnh PR thật) | E | |
-| 11 | Đóng góp cá nhân | mỗi người 2-3 dòng | |
+Thứ tự người nói: **A, D, C, B, E**. Đây là thứ tự theo mạch chuyện (dữ liệu, truy cập, nghiệp vụ nhập/xuất, tồn kho và cảnh báo, LLM + demo + Git) và khớp đúng thứ tự slide trong đề, nên không phải đổi chỗ slide nào. Mỗi người nói một cụm slide liền nhau; khung chi tiết từng slide (ý chính, nguồn, hình, câu hỏi dự kiến) nằm ở `docs/slides-outline.md`.
+
+| # | Slide | Người nói | Thời gian | E kiểm |
+|---|---|---|---|---|
+| 1 | Bìa | A | | tên nhóm, thành viên |
+| 2 | Vấn đề + User Story | A | 1 phút 45 giây (slide 1-3) | thuật ngữ |
+| 3 | ERD + lý do | A | | khớp `erd.png` và SQL |
+| 4 | Endpoint, RESTful, MVC vs MSA | D | 2 phút (slide 4-5) | khớp `api-contract.md` |
+| 5 | JWT & phân quyền | D | | khớp ma trận quyền |
+| 6 | Nhập/xuất kho (quy tắc trạng thái, transaction, đồng thời) | C | 1 phút 30 giây | khớp phiếu nhập của D |
+| 7 | Tồn kho & cảnh báo | B | 1 phút | khớp `api-contract.md` |
+| 8 | LLM + 8 hóa đơn trước/sau | E | 3 phút (slide 8-10) | số khớp `prompt-log.md` |
+| 9 | Demo Swagger (kịch bản `00-shared.md` mục 7) | E dẫn demo | | tập dượt đúng giờ |
+| 10 | Git Flow (ảnh PR thật) | E | | |
+| 11 | Đóng góp cá nhân | cả nhóm, thứ tự A, D, C, B, E | 30 giây | mỗi người 2-3 dòng |
+
 Chốt khung + owner 24/11; bản nháp 27/11; freeze 28/11. Mỗi người tự trình bày phần mình; không đọc nguyên slide; có ảnh chụp dự phòng nếu demo hỏng.
 
 ## 8. Lịch

@@ -2,7 +2,7 @@
 
 > Đọc trước: `00-shared.md`, `docs/api-contract.md` mục 1-2, mục 5.
 > Điểm liên quan: **REST API 15đ + JWT/phân quyền 15đ** + một phần Logic nghiệp vụ (phiếu nhập).
-> Slide: **5** (JWT & phân quyền), **nửa đầu slide 6** (quy tắc trạng thái chứng từ + phiếu nhập; C trình bày phiếu xuất), phối hợp E ở slide 4 (RESTful) và 9 (demo 403).
+> Slide: **4** (Endpoint, RESTful, MVC vs MSA) và **5** (JWT & phân quyền); D nói liền hai slide, sau A. Phối hợp E ở slide 9 (demo 403).
 
 ## 1. Phạm vi (đã chia lại)
 
@@ -25,7 +25,7 @@
 - [ ] Test ma trận 401/403 cho **từng endpoint x từng vai trò** (tham số hóa) + token hết hạn / sai chữ ký / rác -> 401.
 - [ ] Swagger: Authorize hoạt động; mọi endpoint có `@Operation`; 400/401/403/404/409 hiển thị; có ví dụ request.
 - [ ] `GlobalExceptionHandler` có test cho từng nhánh (mục 5.6).
-- [ ] >= 12 unit test + >= 3 integration test; slide 5 + nửa slide 6; >= 3 PR merged.
+- [ ] >= 12 unit test + >= 3 integration test; slide 4 + 5; >= 3 PR merged.
 
 ## 4. Thiết kế phiếu nhập (đã quyết)
 Giống phiếu xuất nhưng **đơn giản hơn** vì cộng tồn không bao giờ thiếu. Vẫn bắt buộc khóa đúng thứ tự (xem bẫy REPEATABLE READ):
@@ -132,7 +132,7 @@ Mở rộng `AuthAndRoleIntegrationTest` (đã có 6 test mẫu) bằng `@Parame
 | 21-22/11 | PR #1, #2, #3 |
 | 23/11 | PR #4 (confirm nhập) -> v0.1.0 |
 | 24-26/11 | PR #5, #6; review PR của cả nhóm |
-| 27/11 | Siết test ma trận; slide 5 + nửa slide 6 |
+| 27/11 | Siết test ma trận; slide 4 + 5 |
 | 28/11 | Freeze; chuẩn bị demo 403 |
 | 29/11 | Tập dượt |
 
