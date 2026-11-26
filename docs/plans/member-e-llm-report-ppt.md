@@ -107,7 +107,7 @@ Dùng `DocumentGuard.startOfDay(from, clock)` / `startOfNextDay(to, clock)` (mú
 `prompt-log.md` hoàn chỉnh (1-2 trang: hỏi gì, nhận gì, sửa/từ chối gì và vì sao). Cập nhật `git-flow.md`. Dựng khung PPT + owner từng slide (xem 7).
 
 ### PR #6 (điểm cộng, chỉ nếu 27/11 còn thời gian) `feat: export stock summary csv`
-`GET /api/reports/stock-summary/export?from=&to=` -> `text/csv; charset=UTF-8` (có BOM để Excel đọc tiếng Việt), chống CSV injection (ô bắt đầu bằng `= + - @` thì thêm `'`).
+`GET /api/reports/stock-summary/export?from=&to=&format=csv|xlsx` -> `text/csv; charset=UTF-8` (có BOM để Excel đọc tiếng Việt, chống CSV injection: ô bắt đầu bằng `= + - @` thì thêm `'`) hoặc `.xlsx` ghi bằng `java.util.zip` (không thêm thư viện). Thêm `xlsx` vì Excel đọc CSV theo dấu phân cách của máy (máy tiếng Việt dùng `;`), nên CSV có thể dồn vào một cột.
 
 ## 6. Điều phối Git (liên tục)
 - 20/11: bật **branch protection** cho `main` & `develop` (PR + 1 approval + CI xanh); dán `.github/pull_request_template.md`.
