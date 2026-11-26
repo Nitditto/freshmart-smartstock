@@ -95,7 +95,8 @@ public class ReceiptServiceImpl implements ReceiptService {
 
         receipt.setSupplier(supplier);
         receipt.setNote(request.note());
-        // Flush the delete before inserting: Hibernate runs INSERT first and would break UNIQUE(receipt_id, product_id).
+        // Flush the delete before inserting: Hibernate runs INSERT first and would break
+        // UNIQUE(receipt_id, product_id).
         receipt.clearDetails();
         receiptRepository.saveAndFlush(receipt);
         addLines(receipt, request.lines(), products);

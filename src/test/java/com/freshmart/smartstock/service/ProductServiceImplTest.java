@@ -265,7 +265,8 @@ class ProductServiceImplTest {
     void createRejectsDuplicateSkuIgnoringCaseWith409() {
         when(productRepository.existsBySkuIgnoreCase("rcq-001")).thenReturn(true);
 
-        ProductRequest request = new ProductRequest("  rcq-001  ", "Cà chua bi", 1L, "hộp", BigDecimal.valueOf(25000), 5);
+        ProductRequest request = new ProductRequest("  rcq-001  ", "Cà chua bi", 1L, "hộp",
+                BigDecimal.valueOf(25000), 5);
         ApiException exception = assertThrows(ApiException.class, () -> service.create(request));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatus());
@@ -278,7 +279,8 @@ class ProductServiceImplTest {
         when(productRepository.existsBySkuIgnoreCase("RCQ-002")).thenReturn(false);
         when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
 
-        ProductRequest request = new ProductRequest("RCQ-002", "Bắp cải tím", 99L, "bắp", BigDecimal.valueOf(18000), 10);
+        ProductRequest request = new ProductRequest("RCQ-002", "Bắp cải tím", 99L, "bắp",
+                BigDecimal.valueOf(18000), 10);
         ApiException exception = assertThrows(ApiException.class, () -> service.create(request));
 
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
@@ -300,7 +302,8 @@ class ProductServiceImplTest {
             return p;
         });
 
-        ProductRequest request = new ProductRequest("  RCQ-003  ", "  Khoai tây Đà Lạt  ", 1L, "  kg  ", BigDecimal.valueOf(30000), 20);
+        ProductRequest request = new ProductRequest("  RCQ-003  ", "  Khoai tây Đà Lạt  ", 1L, "  kg  ",
+                BigDecimal.valueOf(30000), 20);
         ProductResponse response = service.create(request);
 
         assertEquals(20L, response.id());
@@ -374,7 +377,8 @@ class ProductServiceImplTest {
         when(productRepository.findById(5L)).thenReturn(Optional.of(product));
         when(productRepository.existsBySkuIgnoreCaseAndIdNot("th-002", 5L)).thenReturn(true);
 
-        ProductRequest request = new ProductRequest("  th-002  ", "Thịt thăn heo", 2L, "kg", BigDecimal.valueOf(150000), 10);
+        ProductRequest request = new ProductRequest("  th-002  ", "Thịt thăn heo", 2L, "kg",
+                BigDecimal.valueOf(150000), 10);
         ApiException exception = assertThrows(ApiException.class, () -> service.update(5L, request));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatus());
@@ -402,7 +406,8 @@ class ProductServiceImplTest {
         when(productRepository.existsBySkuIgnoreCaseAndIdNot("TH-001", 5L)).thenReturn(false);
         when(categoryRepository.findById(2L)).thenReturn(Optional.of(category));
 
-        ProductRequest request = new ProductRequest("TH-001", "Thịt ba chỉ chuẩn VietGAP", 2L, "kg", BigDecimal.valueOf(145000), 12);
+        ProductRequest request = new ProductRequest("TH-001", "Thịt ba chỉ chuẩn VietGAP", 2L, "kg",
+                BigDecimal.valueOf(145000), 12);
         ProductResponse response = service.update(5L, request);
 
         assertEquals(5L, response.id());
@@ -438,7 +443,8 @@ class ProductServiceImplTest {
         when(productRepository.existsBySkuIgnoreCaseAndIdNot("TC-010", 6L)).thenReturn(false);
         when(categoryRepository.findById(4L)).thenReturn(Optional.of(newCategory));
 
-        ProductRequest request = new ProductRequest("TC-010", "Dưa lưới ruột cam Nhật Bản", 4L, "quả", BigDecimal.valueOf(85000), 8);
+        ProductRequest request = new ProductRequest("TC-010", "Dưa lưới ruột cam Nhật Bản", 4L, "quả",
+                BigDecimal.valueOf(85000), 8);
         ProductResponse response = service.update(6L, request);
 
         assertEquals(6L, response.id());
@@ -469,7 +475,8 @@ class ProductServiceImplTest {
         when(productRepository.existsBySkuIgnoreCaseAndIdNot("BO-001-NEW", 7L)).thenReturn(false);
         when(categoryRepository.findById(2L)).thenReturn(Optional.of(category));
 
-        ProductRequest request = new ProductRequest("  BO-001-NEW  ", "  Thịt bò Wagyu A5  ", 2L, "  khay  ", BigDecimal.valueOf(500000), 3);
+        ProductRequest request = new ProductRequest("  BO-001-NEW  ", "  Thịt bò Wagyu A5  ", 2L, "  khay  ",
+                BigDecimal.valueOf(500000), 3);
         ProductResponse response = service.update(7L, request);
 
         assertEquals("BO-001-NEW", response.sku());
@@ -497,7 +504,8 @@ class ProductServiceImplTest {
         when(productRepository.existsBySkuIgnoreCaseAndIdNot("RC-099", 12L)).thenReturn(false);
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
 
-        ProductRequest request = new ProductRequest("RC-099", "Nấm đùi gà baby hữu cơ", 1L, "gói", BigDecimal.valueOf(25000), 15);
+        ProductRequest request = new ProductRequest("RC-099", "Nấm đùi gà baby hữu cơ", 1L, "gói",
+                BigDecimal.valueOf(25000), 15);
         ProductResponse response = service.update(12L, request);
 
         assertEquals(88, product.getQuantityInStock());
@@ -545,4 +553,16 @@ class ProductServiceImplTest {
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
         assertEquals("Không tìm thấy sản phẩm 999", exception.getMessage());
     }
+
+    @Test
+    void searchEscapesLikeWildcardsInTheKeyword() {
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("id"));
+        when(productRepository.search(eq("RCQ!_001"), isNull(), eq(true), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        service.search(" RCQ_001 ", null, pageable);
+
+        verify(productRepository).search(eq("RCQ!_001"), isNull(), eq(true), any(Pageable.class));
+    }
 }
+
